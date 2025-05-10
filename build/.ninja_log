@@ -1,0 +1,7 @@
+# ninja log v5
+1	52	1746916288356568104	CMakeFiles/sim8086.dir/sim8086.cpp.o.ddi	a32847a9e3a00dbb
+52	61	1746916288370568491	CMakeFiles/sim8086.dir/CXX.dd	1aef24dd7cf2544b
+52	61	1746916288370568491	/home/miguel/Repos/perfaware/build/CMakeFiles/sim8086.dir/CXXModules.json	1aef24dd7cf2544b
+52	61	1746916288370568491	CMakeFiles/sim8086.dir/sim8086.cpp.o.modmap	1aef24dd7cf2544b
+61	557	1746916288858581984	CMakeFiles/sim8086.dir/sim8086.cpp.o	d7c77555b7eb6896
+558	628	1746916288932584030	sim8086	a12ce1f586b6f9f8

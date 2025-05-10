@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/miguel/Repos/perfaware/build",
+  "command": "/usr/bin/clang++ -g -std=gnu++23 @CMakeFiles/sim8086.dir/sim8086.cpp.o.modmap -o CMakeFiles/sim8086.dir/sim8086.cpp.o -c /home/miguel/Repos/perfaware/sim8086.cpp",
+  "file": "/home/miguel/Repos/perfaware/sim8086.cpp",
+  "output": "CMakeFiles/sim8086.dir/sim8086.cpp.o"
+}
+]

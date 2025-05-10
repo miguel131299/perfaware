@@ -1,0 +1,9 @@
+{
+  "revision": 0,
+  "rules": [
+    {
+      "primary-output": "CMakeFiles/sim8086.dir/sim8086.cpp.o"
+    }
+  ],
+  "version": 1
+}
