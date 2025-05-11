@@ -1,3 +1,0 @@
-/home/miguel/Repos/perfaware/build/CMakeFiles/sim8086.dir
-/home/miguel/Repos/perfaware/build/CMakeFiles/edit_cache.dir
-/home/miguel/Repos/perfaware/build/CMakeFiles/rebuild_cache.dir
