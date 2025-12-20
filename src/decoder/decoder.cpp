@@ -9,8 +9,10 @@
 #include <string>
 
 #include "instructions/instruction_handler.hpp"
+#include "instructions/mov_accumulator_mem_handler.hpp"
 #include "instructions/mov_immediate_handler.hpp"
 #include "instructions/mov_immediate_regmem_handler.hpp"
+#include "instructions/mov_mem_accumulator_handler.hpp"
 #include "instructions/mov_regmem_handler.hpp"
 
 //-----------------------------------------------------------------------------
@@ -33,6 +35,12 @@ createInstructionRegistry() {
       std::make_unique<MOVImmediateRegMemHandler>();
   registry[0b11000110] = {0b11111110, std::move(movImmediateRegMemHandler)};
 
+  auto movMemAccumulatorHandler = std::make_unique<MOVMemAccumulatorHandler>();
+  registry[0b10100000] = {0b11111110, std::move(movMemAccumulatorHandler)};
+
+  auto movAccumulatorMemHandler = std::make_unique<MOVAccumulatorMemHandler>();
+  registry[0b10100010] = {0b11111110, std::move(movAccumulatorMemHandler)};
+
   // TODO: Add more instruction types here
   // auto addHandler = std::make_unique<ADDHandler>();
   // registry[0b00000100] = {0b11111110, std::move(addHandler)};
@@ -42,7 +50,8 @@ createInstructionRegistry() {
 
 //-----------------------------------------------------------------------------
 // Print the instruction that was just decoded to stderr for debugging
-static void printDecodedInstruction(const std::stringstream &ss, size_t posBefore, size_t posAfter) {
+static void printDecodedInstruction(const std::stringstream &ss,
+                                    size_t posBefore, size_t posAfter) {
   std::string instruction = ss.str().substr(posBefore, posAfter - posBefore);
   if (!instruction.empty()) {
     std::cerr << instruction;
@@ -71,10 +80,10 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
         size_t posBefore = ss.str().length();
         i += handler->decode(ss, bytestream, i);
         size_t posAfter = ss.str().length();
-        
+
         // Print the instruction that was just decoded
         printDecodedInstruction(ss, posBefore, posAfter);
-        
+
         found = true;
         break;
       }

@@ -39,6 +39,8 @@ set(SIM8086_SOURCES
       src/decoder/instructions/mov_regmem_handler.cpp
       src/decoder/instructions/mov_immediate_handler.cpp
       src/decoder/instructions/mov_immediate_regmem_handler.cpp
+      src/decoder/instructions/mov_mem_accumulator_handler.cpp
+      src/decoder/instructions/mov_accumulator_mem_handler.cpp
       src/utils/utils.cpp
 )
 
