@@ -3,77 +3,10 @@
 #include "../bit_utilities.hpp"
 #include "../operand_decoder.hpp"
 #include "../tables/registers.hpp"
-#include <format>
+#include "mov_utilities.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <string>
-
-//-----------------------------------------------------------------------------
-static MODEncoding getMODEncoding(uint8_t byte) {
-  byte = (byte & BIT_FIELD_MOD_MASK) >> 6;
-  switch (byte) {
-  case 0:
-    return MODEncoding::MEMORY_MODE_NO_DISPLACEMENT;
-  case 1:
-    return MODEncoding::MEMORY_MODE_8_DISPLACEMENT;
-  case 2:
-    return MODEncoding::MEMORY_MODE_16_DISPLACEMENT;
-  case 3:
-    return MODEncoding::REGISTER_MODE;
-  default:
-    throw std::runtime_error("Error decoding MOD: " + std::to_string(byte));
-  }
-}
-
-//-----------------------------------------------------------------------------
-static bool isBitSet(uint8_t byte, size_t bitPosition) {
-  return (byte & (1 << bitPosition)) != 0;
-}
-
-//-----------------------------------------------------------------------------
-static void outputMOVInstruction(std::stringstream &ss, const std::string &dest,
-                                 const std::string &src) {
-  ss << std::format("mov {}, {}\n", dest, src);
-}
-
-//-----------------------------------------------------------------------------
-static std::string getBaseRegisterAddress(uint8_t rmBits) {
-  switch (rmBits) {
-  case 0:
-    return "BX + SI";
-  case 1:
-    return "BX + DI";
-  case 2:
-    return "BP + SI";
-  case 3:
-    return "BP + DI";
-  case 4:
-    return "SI";
-  case 5:
-    return "DI";
-  case 6:
-    return "BP";
-  case 7:
-    return "BX";
-  default:
-    return "";
-  }
-}
-
-//-----------------------------------------------------------------------------
-// Helper to build displacement string with proper +/- formatting
-static std::string formatDisplacement(const std::string &baseAddress,
-                                      int16_t displacement) {
-  if (displacement == 0) {
-    return "[" + baseAddress + "]";
-  }
-  
-  if (displacement < 0) {
-    return "[" + baseAddress + " - " + std::to_string(-displacement) + "]";
-  }
-  
-  return "[" + baseAddress + " + " + std::to_string(displacement) + "]";
-}
 
 //-----------------------------------------------------------------------------
 uint32_t MOVRegMemHandler::handleAddressingMode(
