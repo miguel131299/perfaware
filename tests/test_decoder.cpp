@@ -1,4 +1,3 @@
-#include "gtest/gtest.h"
 #include <fstream>
 #include <gtest/gtest.h>
 #include <iostream>
@@ -47,26 +46,32 @@ TEST_P(DecoderTest, InstructionDecoding) {
   std::string fullPath = baseDir + "/" + param.filename;
 
   // Step 1: Decode binary file
-  std::vector<char> data = Utils::readBinaryFile(fullPath);
-  std::string decoded = Decoder::assembleInstructions(data);
+  try {
+    std::vector<char> data = Utils::readBinaryFile(fullPath);
+    std::string decoded = Decoder::assembleInstructions(data);
 
-  // Step 2: Read reference .asm file
-  std::ifstream refFile(fullPath + ".asm");
-  ASSERT_TRUE(refFile) << "Failed to open reference file: " << param.filename
-                       << ".asm";
+    // Step 2: Read reference .asm file
+    std::ifstream refFile(fullPath + ".asm");
+    ASSERT_TRUE(refFile) << "Failed to open reference file: " << param.filename
+                         << ".asm";
 
-  std::stringstream buffer;
-  buffer << refFile.rdbuf();
-  std::string expected = buffer.str();
+    std::stringstream buffer;
+    buffer << refFile.rdbuf();
+    std::string expected = buffer.str();
 
-  // Step 3: Compare
-  std::string normalizedDecoded = normalizeAssembly(decoded);
-  std::string normalizedExpected = normalizeAssembly(expected);
+    // Step 3: Compare
+    std::string normalizedDecoded = normalizeAssembly(decoded);
+    std::string normalizedExpected = normalizeAssembly(expected);
 
-  EXPECT_EQ(normalizedDecoded, normalizedExpected);
+    EXPECT_EQ(normalizedDecoded, normalizedExpected);
+  } catch (const std::exception &ex) {
+    FAIL() << "File: " << param.filename << " - Exception: " << ex.what();
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(
     MovDecoding, DecoderTest,
     ::testing::Values(DecoderTestParameters{"listing_0037_single_register_mov"},
-                      DecoderTestParameters{"listing_0038_many_register_mov"}));
+                      DecoderTestParameters{"listing_0038_many_register_mov"},
+                      DecoderTestParameters{"listing_0039_more_movs"},
+                      DecoderTestParameters{"listing_0040_challenge_movs"}));
