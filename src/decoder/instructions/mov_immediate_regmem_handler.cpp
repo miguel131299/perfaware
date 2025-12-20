@@ -95,14 +95,13 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
 uint32_t MOVImmediateRegMemHandler::decode(std::stringstream &ss,
                                            const std::vector<char> &bytestream,
                                            uint32_t baseOffset) {
-  // TODO: Implement MOV immediate to register/memory
   // Opcode patterns:
   //   0xC6 (0b11000110) mask 0b11111110: MOV immediate to reg/mem (byte)
   //   0xC7 (0b11000111) mask 0b11111110: MOV immediate to reg/mem (word)
   //
   // Byte format: [opcode][mod-reg-r/m][immediate...][displacement...]
   // The REG field (bits 5-3 of mod-reg-r/m) should be 0 for MOV
-  //
+
   // Steps:
   // 1. Extract W bit from opcode to determine word (1) or byte (0) operation
   // Word/Byte Operation
@@ -120,11 +119,12 @@ uint32_t MOVImmediateRegMemHandler::decode(std::stringstream &ss,
         "Invalid MOV immediate to reg/mem: REG field must be 0, got " +
         std::to_string(regCode));
   }
+
   // 4. Based on MOD, handle different addressing modes (similar to
   // MOVRegMemHandler)
-  return handleAddressingMode(ss, mod, rmCode, bytestream, baseOffset,
-                              isWordOperation);
   // 5. Decode the immediate value
   // 6. Output the instruction
   // 7. Return bytes consumed
+  return handleAddressingMode(ss, mod, rmCode, bytestream, baseOffset,
+                              isWordOperation);
 }
