@@ -25,9 +25,7 @@ Operand OperandDecoder::decodeImmediate(const std::vector<char> &bytestream,
   std::string value;
 
   if (is16Bit) {
-    uint8_t lowByte = static_cast<uint8_t>(bytestream[offset]);
-    uint8_t highByte = static_cast<uint8_t>(bytestream[offset + 1]);
-    int16_t immediateValue = lowByte | (static_cast<int16_t>(highByte) << 8);
+    int16_t immediateValue = readInt16(bytestream, offset);
     value = std::to_string(immediateValue);
   } else {
     int8_t immediateValue = static_cast<int8_t>(bytestream[offset]);
@@ -69,9 +67,7 @@ OperandDecoder::decodeEffectiveAddress(uint8_t RM,
 
   // Add displacement if present
   if (isWithDisplacement) {
-    uint8_t lowByte = static_cast<uint8_t>(bytestream[base + 2]);
-    uint8_t highByte = static_cast<uint8_t>(bytestream[base + 3]);
-    int16_t displacement = lowByte | (static_cast<int16_t>(highByte) << 8);
+    int16_t displacement = readInt16(bytestream, base + 2);
 
     if (displacement != 0) {
       result += " + " + std::to_string(displacement);

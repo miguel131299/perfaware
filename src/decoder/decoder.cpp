@@ -41,6 +41,15 @@ createInstructionRegistry() {
 }
 
 //-----------------------------------------------------------------------------
+// Print the instruction that was just decoded to stderr for debugging
+static void printDecodedInstruction(const std::stringstream &ss, size_t posBefore, size_t posAfter) {
+  std::string instruction = ss.str().substr(posBefore, posAfter - posBefore);
+  if (!instruction.empty()) {
+    std::cerr << instruction;
+  }
+}
+
+//-----------------------------------------------------------------------------
 std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
   // Build the instruction registry (could be cached if needed)
   auto registry = createInstructionRegistry();
@@ -64,10 +73,7 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
         size_t posAfter = ss.str().length();
         
         // Print the instruction that was just decoded
-        std::string instruction = ss.str().substr(posBefore, posAfter - posBefore);
-        if (!instruction.empty()) {
-          std::cerr << instruction;
-        }
+        printDecodedInstruction(ss, posBefore, posAfter);
         
         found = true;
         break;

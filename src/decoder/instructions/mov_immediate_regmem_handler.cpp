@@ -36,9 +36,7 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
     // Check for direct address mode (RM=6 with MOD=00)
     if (rmBits == 6) {
       // Direct address - read 2 more bytes
-      uint8_t lowByte = static_cast<uint8_t>(bytestream[baseOffset + 2]);
-      uint8_t highByte = static_cast<uint8_t>(bytestream[baseOffset + 3]);
-      int16_t address = lowByte | (static_cast<int16_t>(highByte) << 8);
+      int16_t address = readInt16(bytestream, baseOffset + 2);
       memOperand.value = "[" + std::to_string(address) + "]";
 
       Operand immediate = OperandDecoder::decodeImmediate(
@@ -75,9 +73,7 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
   }
 
   case MODEncoding::MEMORY_MODE_16_DISPLACEMENT: {
-    uint8_t lowByte = static_cast<uint8_t>(bytestream[baseOffset + 2]);
-    uint8_t highByte = static_cast<uint8_t>(bytestream[baseOffset + 3]);
-    int16_t displacement = lowByte | (static_cast<int16_t>(highByte) << 8);
+    int16_t displacement = readInt16(bytestream, baseOffset + 2);
 
     std::string baseAddress = getBaseRegisterAddress(rmBits);
     std::string memOperand = formatDisplacement(baseAddress, displacement);
