@@ -35,6 +35,9 @@ set(SIM8086_HEADERS
 
 set(SIM8086_SOURCES 
       src/decoder/decoder.cpp
+      src/decoder/operand_decoder.cpp
+      src/decoder/instructions/mov_regmem_handler.cpp
+      src/decoder/instructions/mov_immediate_handler.cpp
       src/utils/utils.cpp
 )
 

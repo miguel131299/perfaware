@@ -9,7 +9,7 @@
       "request": "launch",
       "name": "LLDB Debug",
       "program": "${workspaceFolder}/build/sim8086",
-      "args": ["./listings/listing_0039_more_movs"],
+      "args": ["./listings/listing_0040_challenge_movs"],
       "cwd": "${workspaceFolder}"
     }
   ]
