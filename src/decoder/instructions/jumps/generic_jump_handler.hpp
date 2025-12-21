@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../utilities/instruction_handler.hpp"
+#include "instructions/utilities/instruction_handler.hpp"
 #include <string>
 #include <string_view>
 

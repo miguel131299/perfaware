@@ -51,6 +51,7 @@ set(SIM8086_SOURCES
 # Core library
 add_library(sim8086_core STATIC ${SIM8086_SOURCES})
 target_include_directories(sim8086_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(sim8086_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/decoder)
 
 # Main Binary
 add_executable(sim8086 src/main.cpp)

@@ -1,9 +1,9 @@
 #include "generic_regmem_handler.hpp"
 
-#include "../../operand_decoder.hpp"
-#include "../../tables/registers.hpp"
-#include "../mov/mov_utilities.hpp"
-#include "../utilities/bit_utilities.hpp"
+#include "operand_decoder.hpp"
+#include "tables/registers.hpp"
+#include "instructions/mov/mov_utilities.hpp"
+#include "instructions/utilities/bit_utilities.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <string>

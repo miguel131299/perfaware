@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../utilities/instruction_handler.hpp"
+#include "instructions/utilities/instruction_handler.hpp"
 #include <string_view>
 
 // Handler for MOV immediate to register instruction (opcode pattern 0b10110000)

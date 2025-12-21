@@ -1,7 +1,7 @@
 #include "mov_accumulator_mem_handler.hpp"
 
-#include "../utilities/bit_utilities.hpp"
-#include "../../tables/registers.hpp"
+#include "instructions/utilities/bit_utilities.hpp"
+#include "tables/registers.hpp"
 #include "mov_utilities.hpp"
 #include <sstream>
 #include <string>

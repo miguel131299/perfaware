@@ -1,8 +1,8 @@
 #include "arithmetic_regmem_handler.hpp"
 
-#include "../utilities/bit_utilities.hpp"
-#include "../../operand_decoder.hpp"
-#include "../../tables/registers.hpp"
+#include "instructions/utilities/bit_utilities.hpp"
+#include "operand_decoder.hpp"
+#include "tables/registers.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <string>

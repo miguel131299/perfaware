@@ -1,7 +1,7 @@
 #include "immediate_regmem_group_handler.hpp"
 
-#include "../utilities/bit_utilities.hpp"
-#include "../utilities/instruction_output_utilities.hpp"
+#include "instructions/utilities/bit_utilities.hpp"
+#include "instructions/utilities/instruction_output_utilities.hpp"
 #include "arithmetic_immediate_regmem_handler.hpp"
 #include <sstream>
 #include <stdexcept>

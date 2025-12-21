@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../utilities/instruction_handler.hpp"
+#include "instructions/utilities/instruction_handler.hpp"
 #include <string_view>
 
 // Handler for MOV memory to accumulator instruction (opcode 0xA0/0xA1)
