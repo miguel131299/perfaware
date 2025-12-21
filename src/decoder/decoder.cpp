@@ -150,7 +150,8 @@ struct InstructionInfo {
   uint32_t byteOffset;
   uint32_t bytesLength;
   bool isJump;
-  int32_t jumpTarget; // Only valid if isJump is true
+  int32_t jumpTarget;        // Only valid if isJump is true
+  std::string decodedOutput; // Cached output from decoding
 };
 
 // First pass: Decode instructions and collect jump target addresses
@@ -169,21 +170,24 @@ static std::vector<InstructionInfo> collectInstructions(
     bool found = false;
 
     // Try to match against registered patterns
+    // TODO: Do efficient lookup table instead of iterating through all possible
+    // patterns. (Sort by length of mask).
     for (const auto &[pattern, maskAndHandler] : registry) {
       const auto &[mask, handler] = maskAndHandler;
       if ((opcode & mask) == pattern) {
         uint32_t byteOffsetBefore = i;
 
-        // Decode to figure out instruction length
-        std::stringstream dummy;
-        i += handler->decode(dummy, bytestream, i);
+        // Decode instruction and capture output
+        std::stringstream decodedSs;
+        i += handler->decode(decodedSs, bytestream, i);
         uint32_t instructionLength = i - byteOffsetBefore;
 
         // Check if this is a jump instruction (opcodes 0x70-0x7F, 0xE0-0xE3)
         bool isJump = (opcode >= 0x70 && opcode <= 0x7F) ||
                       (opcode >= 0xE0 && opcode <= 0xE3);
 
-        InstructionInfo info{byteOffsetBefore, instructionLength, isJump, 0};
+        InstructionInfo info{byteOffsetBefore, instructionLength, isJump, 0,
+                             decodedSs.str()};
 
         // If jump, calculate target
         if (isJump) {
@@ -288,8 +292,8 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
             ss << mnemonic << " " << targetToLabel[target] << "\n";
           }
         } else {
-          // Regular instruction
-          handler->decode(ss, bytestream, instr.byteOffset);
+          // Regular instruction - use cached output from pass 1
+          ss << instr.decodedOutput;
         }
 
         size_t posAfter = ss.str().length();
