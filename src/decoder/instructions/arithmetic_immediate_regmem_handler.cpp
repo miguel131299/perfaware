@@ -3,6 +3,7 @@
 #include "../bit_utilities.hpp"
 #include "../operand_decoder.hpp"
 #include "../tables/registers.hpp"
+#include "mov_utilities.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -19,8 +20,9 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
 
   switch (mod) {
   case MODEncoding::REGISTER_MODE: {
-    std::string regOperand = std::string(getRegisterName(rmBits, isWordOperation));
-    
+    std::string regOperand =
+        std::string(getRegisterName(rmBits, isWordOperation));
+
     bool isImmediateWord = isWordOperation && !isSignExtended;
     Operand immediate = OperandDecoder::decodeImmediate(
         bytestream, baseOffset + 2, isImmediateWord);
@@ -40,7 +42,8 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
       Operand immediate = OperandDecoder::decodeImmediate(
           bytestream, baseOffset + 4, isImmediateWord);
 
-      outputFunc_(ss, memOperand.value, immediate.value);
+      outputFunc_(ss, memOperand.value,
+                  addExplicitSizeToImmediate(immediate.value, isWordOperation));
 
       return isImmediateWord ? 6 : 5;
     }
@@ -50,7 +53,7 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
         bytestream, baseOffset + 2, isImmediateWord);
 
     outputFunc_(ss, memOperand.value,
-               addExplicitSizeToImmediate(immediate.value, isWordOperation));
+                addExplicitSizeToImmediate(immediate.value, isWordOperation));
 
     return isImmediateWord ? 4 : 3;
   }
@@ -65,7 +68,7 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
         bytestream, baseOffset + 3, isImmediateWord);
 
     outputFunc_(ss, memOperand,
-               addExplicitSizeToImmediate(immediate.value, isWordOperation));
+                addExplicitSizeToImmediate(immediate.value, isWordOperation));
 
     return isImmediateWord ? 5 : 4;
   }
@@ -81,7 +84,7 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
         bytestream, baseOffset + 4, isImmediateWord);
 
     outputFunc_(ss, memOperand,
-               addExplicitSizeToImmediate(immediate.value, isWordOperation));
+                addExplicitSizeToImmediate(immediate.value, isWordOperation));
     return isImmediateWord ? 6 : 5;
   }
   }
@@ -90,9 +93,10 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
 }
 
 //-----------------------------------------------------------------------------
-uint32_t ArithmeticImmediateRegMemHandler::decode(std::stringstream &ss,
-                                                  const std::vector<char> &bytestream,
-                                                  uint32_t baseOffset) {
+uint32_t
+ArithmeticImmediateRegMemHandler::decode(std::stringstream &ss,
+                                         const std::vector<char> &bytestream,
+                                         uint32_t baseOffset) {
   // Opcode patterns:
   //   0x80-0x83: Group of immediate operations
   //
@@ -111,9 +115,10 @@ uint32_t ArithmeticImmediateRegMemHandler::decode(std::stringstream &ss,
   uint8_t rmCode = secondByte & BIT_FIELD_RM_MASK;
 
   if (regCode != expectedRegField_) {
-    throw std::runtime_error(
-        "Invalid " + std::string(mnemonic_) + " immediate to reg/mem: REG field must be " +
-        std::to_string(expectedRegField_) + ", got " + std::to_string(regCode));
+    throw std::runtime_error("Invalid " + std::string(mnemonic_) +
+                             " immediate to reg/mem: REG field must be " +
+                             std::to_string(expectedRegField_) + ", got " +
+                             std::to_string(regCode));
   }
 
   return handleAddressingMode(ss, mod, rmCode, bytestream, baseOffset,

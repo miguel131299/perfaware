@@ -37,6 +37,7 @@ set(SIM8086_SOURCES
       src/decoder/decoder.cpp
       src/decoder/operand_decoder.cpp
       src/decoder/instructions/generic_regmem_handler.cpp
+      src/decoder/instructions/generic_jump_handler.cpp
       src/decoder/instructions/arithmetic_immediate_accumulator_handler.cpp
       src/decoder/instructions/arithmetic_immediate_regmem_handler.cpp
       src/decoder/instructions/immediate_regmem_group_handler.cpp

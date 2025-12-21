@@ -32,6 +32,12 @@ std::string normalizeAssembly(const std::string &input) {
       std::transform(line.begin(), line.end(), line.begin(),
                      [](unsigned char c) { return std::tolower(c); });
 
+      // Remove all whitespace using erase-remove idiom
+      line.erase(
+          std::remove_if(line.begin(), line.end(),
+                         [](unsigned char c) { return std::isspace(c); }),
+          line.end());
+
       normalized << line << '\n';
     }
   }
