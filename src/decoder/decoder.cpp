@@ -8,15 +8,19 @@
 #include <stdexcept>
 #include <string>
 
-#include "instructions/instruction_handler.hpp"
 #include "instructions/add_immediate_accumulator_handler.hpp"
-#include "instructions/add_immediate_regmem_handler.hpp"
 #include "instructions/add_regmem_handler.hpp"
+#include "instructions/cmp_immediate_accumulator_handler.hpp"
+#include "instructions/cmp_regmem_handler.hpp"
+#include "instructions/immediate_regmem_group_handler.hpp"
+#include "instructions/instruction_handler.hpp"
 #include "instructions/mov_accumulator_mem_handler.hpp"
 #include "instructions/mov_immediate_handler.hpp"
 #include "instructions/mov_immediate_regmem_handler.hpp"
 #include "instructions/mov_mem_accumulator_handler.hpp"
 #include "instructions/mov_regmem_handler.hpp"
+#include "instructions/sub_immediate_accumulator_handler.hpp"
+#include "instructions/sub_regmem_handler.hpp"
 
 //-----------------------------------------------------------------------------
 // Create instruction handler registry
@@ -48,16 +52,37 @@ createInstructionRegistry() {
   auto addRegMemHandler = std::make_unique<ADDRegMemHandler>();
   registry[0b00000000] = {0b11111100, std::move(addRegMemHandler)};
 
-  auto addImmediateAccumulatorHandler = std::make_unique<ADDImmediateAccumulatorHandler>();
-  registry[0b00000100] = {0b11111110, std::move(addImmediateAccumulatorHandler)};
+  auto addImmediateAccumulatorHandler =
+      std::make_unique<ADDImmediateAccumulatorHandler>();
+  registry[0b00000100] = {0b11111110,
+                          std::move(addImmediateAccumulatorHandler)};
 
-  auto addImmediateRegMemHandler =
-      std::make_unique<ADDImmediateRegMemHandler>();
-  registry[0b10000000] = {0b11111100, std::move(addImmediateRegMemHandler)};
+  // SUB instructions (each pattern gets its own handler)
+  auto subRegMemHandler = std::make_unique<SUBRegMemHandler>();
+  registry[0b00101000] = {0b11111100, std::move(subRegMemHandler)};
+
+  auto subImmediateAccumulatorHandler =
+      std::make_unique<SUBImmediateAccumulatorHandler>();
+  registry[0b00101100] = {0b11111110,
+                          std::move(subImmediateAccumulatorHandler)};
+
+  // CMP instructions (each pattern gets its own handler)
+  auto cmpRegMemHandler = std::make_unique<CMPRegMemHandler>();
+  registry[0b00111000] = {0b11111100, std::move(cmpRegMemHandler)};
+
+  auto cmpImmediateAccumulatorHandler =
+      std::make_unique<CMPImmediateAccumulatorHandler>();
+  registry[0b00111100] = {0b11111110,
+                          std::move(cmpImmediateAccumulatorHandler)};
+
+  // Group handler for 0x80-0x83 immediate to reg/mem (ADD, SUB, CMP)
+  auto immediateRegMemGroupHandler =
+      std::make_unique<ImmediateRegMemGroupHandler>();
+  registry[0b10000000] = {0b11111100, std::move(immediateRegMemGroupHandler)};
 
   // TODO: Add more instruction types here
-  // auto subHandler = std::make_unique<SUBHandler>();
-  // registry[0b00101000] = {0b11111100, std::move(subHandler)};
+  // auto xorHandler = std::make_unique<XORHandler>();
+  // registry[0b00110000] = {0b11111100, std::move(xorHandler)};
 
   return registry;
 }
