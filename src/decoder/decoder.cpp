@@ -9,6 +9,9 @@
 #include <string>
 
 #include "instructions/instruction_handler.hpp"
+#include "instructions/add_immediate_accumulator_handler.hpp"
+#include "instructions/add_immediate_regmem_handler.hpp"
+#include "instructions/add_regmem_handler.hpp"
 #include "instructions/mov_accumulator_mem_handler.hpp"
 #include "instructions/mov_immediate_handler.hpp"
 #include "instructions/mov_immediate_regmem_handler.hpp"
@@ -41,9 +44,20 @@ createInstructionRegistry() {
   auto movAccumulatorMemHandler = std::make_unique<MOVAccumulatorMemHandler>();
   registry[0b10100010] = {0b11111110, std::move(movAccumulatorMemHandler)};
 
+  // ADD instructions (each pattern gets its own handler)
+  auto addRegMemHandler = std::make_unique<ADDRegMemHandler>();
+  registry[0b00000000] = {0b11111100, std::move(addRegMemHandler)};
+
+  auto addImmediateAccumulatorHandler = std::make_unique<ADDImmediateAccumulatorHandler>();
+  registry[0b00000100] = {0b11111110, std::move(addImmediateAccumulatorHandler)};
+
+  auto addImmediateRegMemHandler =
+      std::make_unique<ADDImmediateRegMemHandler>();
+  registry[0b10000000] = {0b11111100, std::move(addImmediateRegMemHandler)};
+
   // TODO: Add more instruction types here
-  // auto addHandler = std::make_unique<ADDHandler>();
-  // registry[0b00000100] = {0b11111110, std::move(addHandler)};
+  // auto subHandler = std::make_unique<SUBHandler>();
+  // registry[0b00101000] = {0b11111100, std::move(subHandler)};
 
   return registry;
 }

@@ -74,4 +74,5 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(DecoderTestParameters{"listing_0037_single_register_mov"},
                       DecoderTestParameters{"listing_0038_many_register_mov"},
                       DecoderTestParameters{"listing_0039_more_movs"},
-                      DecoderTestParameters{"listing_0040_challenge_movs"}));
+                      DecoderTestParameters{"listing_0040_challenge_movs"},
+                      DecoderTestParameters{"listing_0041_add_sub_cmp_jnz"}));
