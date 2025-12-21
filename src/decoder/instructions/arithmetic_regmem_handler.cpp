@@ -1,16 +1,14 @@
-#include "sub_regmem_handler.hpp"
+#include "arithmetic_regmem_handler.hpp"
 
 #include "../bit_utilities.hpp"
 #include "../operand_decoder.hpp"
 #include "../tables/registers.hpp"
-#include "sub_utilities.hpp"
-#include <format>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 
 //-----------------------------------------------------------------------------
-uint32_t SUBRegMemHandler::handleAddressingMode(
+uint32_t ArithmeticRegMemHandler::handleAddressingMode(
     std::stringstream &ss, MODEncoding mod, uint8_t rmBits,
     const std::vector<char> &bytestream, uint32_t baseOffset, uint8_t regCode,
     bool isWordOperation, bool isDestReg) {
@@ -19,13 +17,12 @@ uint32_t SUBRegMemHandler::handleAddressingMode(
 
   switch (mod) {
   case MODEncoding::REGISTER_MODE: {
-    // Both are registers
     std::string rmOperand =
         std::string(getRegisterName(rmBits, isWordOperation));
     if (isDestReg) {
-      outputSUBInstruction(ss, regOperand, rmOperand);
+      outputFunc_(ss, regOperand, rmOperand);
     } else {
-      outputSUBInstruction(ss, rmOperand, regOperand);
+      outputFunc_(ss, rmOperand, regOperand);
     }
     return 2;
   }
@@ -34,25 +31,23 @@ uint32_t SUBRegMemHandler::handleAddressingMode(
     Operand memOperand = OperandDecoder::decodeEffectiveAddress(
         rmBits, bytestream, baseOffset, false);
 
-    // Check for direct address mode (RM=6 with MOD=00)
     if (rmBits == 6) {
-      // Direct address - read 2 more bytes
       int16_t address = readInt16(bytestream, baseOffset + 2);
       memOperand.value = "[" + std::to_string(address) + "]";
 
       if (isDestReg) {
-        outputSUBInstruction(ss, regOperand, memOperand.value);
+        outputFunc_(ss, regOperand, memOperand.value);
       } else {
-        outputSUBInstruction(ss, memOperand.value, regOperand);
+        outputFunc_(ss, memOperand.value, regOperand);
       }
 
       return 4;
     }
 
     if (isDestReg) {
-      outputSUBInstruction(ss, regOperand, memOperand.value);
+      outputFunc_(ss, regOperand, memOperand.value);
     } else {
-      outputSUBInstruction(ss, memOperand.value, regOperand);
+      outputFunc_(ss, memOperand.value, regOperand);
     }
 
     return 2;
@@ -64,9 +59,9 @@ uint32_t SUBRegMemHandler::handleAddressingMode(
     std::string memOperand = formatDisplacement(baseAddress, displacement);
 
     if (isDestReg) {
-      outputSUBInstruction(ss, regOperand, memOperand);
+      outputFunc_(ss, regOperand, memOperand);
     } else {
-      outputSUBInstruction(ss, memOperand, regOperand);
+      outputFunc_(ss, memOperand, regOperand);
     }
 
     return 3;
@@ -79,9 +74,9 @@ uint32_t SUBRegMemHandler::handleAddressingMode(
     std::string memOperand = formatDisplacement(baseAddress, displacement);
 
     if (isDestReg) {
-      outputSUBInstruction(ss, regOperand, memOperand);
+      outputFunc_(ss, regOperand, memOperand);
     } else {
-      outputSUBInstruction(ss, memOperand, regOperand);
+      outputFunc_(ss, memOperand, regOperand);
     }
 
     return 4;
@@ -92,11 +87,11 @@ uint32_t SUBRegMemHandler::handleAddressingMode(
 }
 
 //-----------------------------------------------------------------------------
-uint32_t SUBRegMemHandler::decode(std::stringstream &ss,
-                                  const std::vector<char> &bytestream,
-                                  uint32_t baseOffset) {
+uint32_t ArithmeticRegMemHandler::decode(std::stringstream &ss,
+                                         const std::vector<char> &bytestream,
+                                         uint32_t baseOffset) {
   // Opcode patterns:
-  //   0x28 (0b00101000) mask 0b11111100: SUB reg/mem with register
+  //   0x00-0x03 (ADD), 0x28-0x2B (SUB): reg/mem with register
   //
   // Byte format: [opcode][mod-reg-r/m][optional displacement]
   // D bit (bit 1): Direction - 1 = reg is destination, 0 = reg is source

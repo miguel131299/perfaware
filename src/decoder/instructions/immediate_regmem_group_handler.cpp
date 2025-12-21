@@ -1,10 +1,10 @@
 #include "immediate_regmem_group_handler.hpp"
 
 #include "../bit_utilities.hpp"
-#include "add_immediate_regmem_handler.hpp"
-#include "cmp_immediate_regmem_handler.hpp"
-#include "sub_immediate_regmem_handler.hpp"
-#include <memory>
+#include "add_utilities.hpp"
+#include "arithmetic_immediate_regmem_handler.hpp"
+#include "cmp_utilities.hpp"
+#include "sub_utilities.hpp"
 #include <sstream>
 #include <stdexcept>
 
@@ -20,17 +20,17 @@ ImmediateRegMemGroupHandler::decode(std::stringstream &ss,
   switch (regCode) {
   case 0: {
     // ADD immediate to reg/mem
-    ADDImmediateRegMemHandler handler;
+    ArithmeticImmediateRegMemHandler handler("ADD (imm to reg/mem)", 0, outputADDInstruction);
     return handler.decode(ss, bytestream, baseOffset);
   }
   case 5: {
     // SUB immediate to reg/mem
-    SUBImmediateRegMemHandler handler;
+    ArithmeticImmediateRegMemHandler handler("SUB (imm to reg/mem)", 5, outputSUBInstruction);
     return handler.decode(ss, bytestream, baseOffset);
   }
   case 7: {
     // CMP immediate to reg/mem
-    CMPImmediateRegMemHandler handler;
+    ArithmeticImmediateRegMemHandler handler("CMP (imm to reg/mem)", 7, outputCMPInstruction);
     return handler.decode(ss, bytestream, baseOffset);
   }
   default:
