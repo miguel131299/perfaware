@@ -36,11 +36,10 @@ set(SIM8086_HEADERS
 set(SIM8086_SOURCES 
       src/decoder/decoder.cpp
       src/decoder/operand_decoder.cpp
+      src/decoder/instructions/generic_regmem_handler.cpp
       src/decoder/instructions/arithmetic_immediate_accumulator_handler.cpp
-      src/decoder/instructions/arithmetic_regmem_handler.cpp
       src/decoder/instructions/arithmetic_immediate_regmem_handler.cpp
       src/decoder/instructions/immediate_regmem_group_handler.cpp
-      src/decoder/instructions/mov_regmem_handler.cpp
       src/decoder/instructions/mov_immediate_handler.cpp
       src/decoder/instructions/mov_immediate_regmem_handler.cpp
       src/decoder/instructions/mov_mem_accumulator_handler.cpp
