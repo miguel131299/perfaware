@@ -1,8 +1,8 @@
 #include "arithmetic_immediate_accumulator_handler.hpp"
 
-#include "../bit_utilities.hpp"
-#include "../operand_decoder.hpp"
-#include "../tables/registers.hpp"
+#include "../utilities/bit_utilities.hpp"
+#include "../../operand_decoder.hpp"
+#include "../../tables/registers.hpp"
 #include <sstream>
 #include <string>
 

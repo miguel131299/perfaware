@@ -1,6 +1,6 @@
 #include "operand_decoder.hpp"
 
-#include "bit_utilities.hpp"
+#include "instructions/utilities/bit_utilities.hpp"
 #include "tables/registers.hpp"
 #include <stdexcept>
 #include <string>

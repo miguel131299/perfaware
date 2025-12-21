@@ -9,16 +9,16 @@
 #include <stdexcept>
 #include <string>
 
-#include "instructions/arithmetic_immediate_accumulator_handler.hpp"
-#include "instructions/generic_jump_handler.hpp"
-#include "instructions/generic_regmem_handler.hpp"
-#include "instructions/immediate_regmem_group_handler.hpp"
-#include "instructions/instruction_handler.hpp"
-#include "instructions/instruction_output_utilities.hpp"
-#include "instructions/mov_accumulator_mem_handler.hpp"
-#include "instructions/mov_immediate_handler.hpp"
-#include "instructions/mov_immediate_regmem_handler.hpp"
-#include "instructions/mov_mem_accumulator_handler.hpp"
+#include "instructions/arithmetic/arithmetic_immediate_accumulator_handler.hpp"
+#include "instructions/arithmetic/immediate_regmem_group_handler.hpp"
+#include "instructions/generic/generic_regmem_handler.hpp"
+#include "instructions/jumps/generic_jump_handler.hpp"
+#include "instructions/mov/mov_accumulator_mem_handler.hpp"
+#include "instructions/mov/mov_immediate_handler.hpp"
+#include "instructions/mov/mov_immediate_regmem_handler.hpp"
+#include "instructions/mov/mov_mem_accumulator_handler.hpp"
+#include "instructions/utilities/instruction_handler.hpp"
+#include "instructions/utilities/instruction_output_utilities.hpp"
 
 //-----------------------------------------------------------------------------
 // Create instruction handler registry

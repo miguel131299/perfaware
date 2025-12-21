@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../bit_utilities.hpp"
+#include "../utilities/bit_utilities.hpp"
 #include <cstdint>
 #include <format>
 #include <sstream>

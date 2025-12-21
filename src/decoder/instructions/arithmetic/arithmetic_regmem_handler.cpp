@@ -1,15 +1,14 @@
-#include "generic_regmem_handler.hpp"
+#include "arithmetic_regmem_handler.hpp"
 
-#include "../bit_utilities.hpp"
-#include "../operand_decoder.hpp"
-#include "../tables/registers.hpp"
-#include "mov_utilities.hpp"
+#include "../utilities/bit_utilities.hpp"
+#include "../../operand_decoder.hpp"
+#include "../../tables/registers.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <string>
 
 //-----------------------------------------------------------------------------
-uint32_t GenericRegMemHandler::handleAddressingMode(
+uint32_t ArithmeticRegMemHandler::handleAddressingMode(
     std::stringstream &ss, MODEncoding mod, uint8_t rmBits,
     const std::vector<char> &bytestream, uint32_t baseOffset, uint8_t regCode,
     bool isWordOperation, bool isDestReg) {
@@ -88,11 +87,11 @@ uint32_t GenericRegMemHandler::handleAddressingMode(
 }
 
 //-----------------------------------------------------------------------------
-uint32_t GenericRegMemHandler::decode(std::stringstream &ss,
-                                      const std::vector<char> &bytestream,
-                                      uint32_t baseOffset) {
-  // Generic handler for reg/mem with register operations
-  // Works with MOV, ADD, SUB, CMP - all have identical structure
+uint32_t ArithmeticRegMemHandler::decode(std::stringstream &ss,
+                                         const std::vector<char> &bytestream,
+                                         uint32_t baseOffset) {
+  // Opcode patterns:
+  //   0x00-0x03 (ADD), 0x28-0x2B (SUB): reg/mem with register
   //
   // Byte format: [opcode][mod-reg-r/m][optional displacement]
   // D bit (bit 1): Direction - 1 = reg is destination, 0 = reg is source
@@ -106,8 +105,8 @@ uint32_t GenericRegMemHandler::decode(std::stringstream &ss,
   uint8_t secondByte = static_cast<uint8_t>(bytestream[baseOffset + 1]);
   MODEncoding mod = getMODEncoding(secondByte);
   uint8_t regCode = (secondByte & BIT_FIELD_REG_MASK) >> 3;
-  uint8_t rmBits = secondByte & BIT_FIELD_RM_MASK;
+  uint8_t rmCode = secondByte & BIT_FIELD_RM_MASK;
 
-  return handleAddressingMode(ss, mod, rmBits, bytestream, baseOffset, regCode,
-                              isWordOperation, isDestReg);
+  return handleAddressingMode(ss, mod, rmCode, bytestream, baseOffset,
+                              regCode, isWordOperation, isDestReg);
 }

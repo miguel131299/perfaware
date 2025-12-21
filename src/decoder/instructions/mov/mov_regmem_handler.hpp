@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../instructions/instruction_handler.hpp"
-#include "../instructions/mov_utilities.hpp"
+#include "../utilities/instruction_handler.hpp"
+#include "../mov/mov_utilities.hpp"
 #include <string_view>
 
 //-----------------------------------------------------------------------------

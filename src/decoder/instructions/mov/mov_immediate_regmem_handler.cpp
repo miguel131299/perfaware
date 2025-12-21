@@ -1,8 +1,8 @@
 #include "mov_immediate_regmem_handler.hpp"
 
-#include "../bit_utilities.hpp"
-#include "../operand_decoder.hpp"
-#include "../tables/registers.hpp"
+#include "../utilities/bit_utilities.hpp"
+#include "../../operand_decoder.hpp"
+#include "../../tables/registers.hpp"
 #include "mov_regmem_handler.hpp"
 #include "mov_utilities.hpp"
 #include <sstream>
