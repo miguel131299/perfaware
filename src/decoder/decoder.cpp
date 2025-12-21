@@ -160,6 +160,8 @@ static std::vector<InstructionInfo> collectInstructions(
                    std::pair<uint8_t, std::unique_ptr<InstructionHandler>>>
         &registry) {
   std::vector<InstructionInfo> instructions;
+  instructions.reserve(bytestream.size() /
+                       2); // Most instructions are 1-2 bytes
 
   uint32_t i = 0;
   while (i < bytestream.size()) {
@@ -210,8 +212,8 @@ static std::vector<InstructionInfo> collectInstructions(
 
 //-----------------------------------------------------------------------------
 std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
-  // Build the instruction registry (could be cached if needed)
-  auto registry = createInstructionRegistry();
+  // Cache the registry - build it once per program
+  static const auto registry = createInstructionRegistry();
 
   // First pass: Collect all instructions and jump targets
   auto instructions = collectInstructions(bytestream, registry);
@@ -263,21 +265,23 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
                       (opcode >= 0xE0 && opcode <= 0xE3);
 
         if (isJump) {
-          // Handle jump manually with label
+          // Handle jump manually with label - avoid expensive decode + string
+          // parsing
+          const char *mnemonic = nullptr;
+          if (opcode >= 0x70 && opcode <= 0x7F) {
+            static const char *jump_mn[] = {
+                "jo", "jno", "jb", "jnb", "je", "jne", "jbe", "ja",
+                "js", "jns", "jp", "jnp", "jl", "jnl", "jle", "jg"};
+            mnemonic = jump_mn[opcode - 0x70];
+          } else if (opcode >= 0xE0 && opcode <= 0xE3) {
+            static const char *loop_mn[] = {"loopnz", "loopz", "loop", "jcxz"};
+            mnemonic = loop_mn[opcode - 0xE0];
+          }
+
           int8_t displacement =
               static_cast<int8_t>(bytestream[instr.byteOffset + 1]);
           int32_t target =
               static_cast<int32_t>(instr.byteOffset + 2 + displacement);
-
-          // Get mnemonic from handler (we'll extract it from decode output)
-          std::stringstream tempSs;
-          handler->decode(tempSs, bytestream, instr.byteOffset);
-          std::string tempOutput = tempSs.str();
-
-          // Extract mnemonic (first word)
-          std::istringstream iss(tempOutput);
-          std::string mnemonic;
-          iss >> mnemonic;
 
           // Output with label
           ss << mnemonic << " " << targetToLabel[target] << "\n";
