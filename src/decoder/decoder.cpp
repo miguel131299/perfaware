@@ -11,16 +11,13 @@
 #include "instructions/instruction_handler.hpp"
 #include "instructions/arithmetic_immediate_accumulator_handler.hpp"
 #include "instructions/arithmetic_regmem_handler.hpp"
-#include "instructions/cmp_regmem_handler.hpp"
 #include "instructions/immediate_regmem_group_handler.hpp"
 #include "instructions/mov_accumulator_mem_handler.hpp"
 #include "instructions/mov_immediate_handler.hpp"
 #include "instructions/mov_immediate_regmem_handler.hpp"
 #include "instructions/mov_mem_accumulator_handler.hpp"
 #include "instructions/mov_regmem_handler.hpp"
-#include "instructions/add_utilities.hpp"
-#include "instructions/cmp_utilities.hpp"
-#include "instructions/sub_utilities.hpp"
+#include "instructions/instruction_output_utilities.hpp"
 
 //-----------------------------------------------------------------------------
 // Create instruction handler registry
@@ -50,33 +47,52 @@ createInstructionRegistry() {
 
   // ADD instructions (generic handlers with output function)
   auto addRegMemHandler = std::make_unique<ArithmeticRegMemHandler>(
-      "ADD (reg/mem)", outputADDInstruction);
+      "ADD (reg/mem)", 
+      [](std::stringstream &ss, const std::string &dest, const std::string &src) {
+        outputInstruction(ss, "add", dest, src);
+      });
   registry[0b00000000] = {0b11111100, std::move(addRegMemHandler)};
 
   auto addImmediateAccumulatorHandler =
       std::make_unique<ArithmeticImmediateAccumulatorHandler>(
-          "ADD (imm to accumulator)", outputADDInstruction);
+          "ADD (imm to accumulator)", 
+          [](std::stringstream &ss, const std::string &dest, const std::string &src) {
+            outputInstruction(ss, "add", dest, src);
+          });
   registry[0b00000100] = {0b11111110,
                           std::move(addImmediateAccumulatorHandler)};
 
   // SUB instructions (generic handlers with output function)
   auto subRegMemHandler = std::make_unique<ArithmeticRegMemHandler>(
-      "SUB (reg/mem)", outputSUBInstruction);
+      "SUB (reg/mem)", 
+      [](std::stringstream &ss, const std::string &dest, const std::string &src) {
+        outputInstruction(ss, "sub", dest, src);
+      });
   registry[0b00101000] = {0b11111100, std::move(subRegMemHandler)};
 
   auto subImmediateAccumulatorHandler =
       std::make_unique<ArithmeticImmediateAccumulatorHandler>(
-          "SUB (imm to accumulator)", outputSUBInstruction);
+          "SUB (imm to accumulator)", 
+          [](std::stringstream &ss, const std::string &dest, const std::string &src) {
+            outputInstruction(ss, "sub", dest, src);
+          });
   registry[0b00101100] = {0b11111110,
                           std::move(subImmediateAccumulatorHandler)};
 
-  // CMP instructions (immediate accumulator uses generic handler)
-  auto cmpRegMemHandler = std::make_unique<CMPRegMemHandler>();
+  // CMP instructions (both handlers use generic implementations)
+  auto cmpRegMemHandler = std::make_unique<ArithmeticRegMemHandler>(
+      "CMP (reg/mem)", 
+      [](std::stringstream &ss, const std::string &dest, const std::string &src) {
+        outputInstruction(ss, "cmp", dest, src);
+      });
   registry[0b00111000] = {0b11111100, std::move(cmpRegMemHandler)};
 
   auto cmpImmediateAccumulatorHandler =
       std::make_unique<ArithmeticImmediateAccumulatorHandler>(
-          "CMP (imm to accumulator)", outputCMPInstruction);
+          "CMP (imm to accumulator)", 
+          [](std::stringstream &ss, const std::string &dest, const std::string &src) {
+            outputInstruction(ss, "cmp", dest, src);
+          });
   registry[0b00111100] = {0b11111110,
                           std::move(cmpImmediateAccumulatorHandler)};
 

@@ -1,10 +1,8 @@
 #include "immediate_regmem_group_handler.hpp"
 
 #include "../bit_utilities.hpp"
-#include "add_utilities.hpp"
 #include "arithmetic_immediate_regmem_handler.hpp"
-#include "cmp_utilities.hpp"
-#include "sub_utilities.hpp"
+#include "instruction_output_utilities.hpp"
 #include <sstream>
 #include <stdexcept>
 
@@ -20,17 +18,32 @@ ImmediateRegMemGroupHandler::decode(std::stringstream &ss,
   switch (regCode) {
   case 0: {
     // ADD immediate to reg/mem
-    ArithmeticImmediateRegMemHandler handler("ADD (imm to reg/mem)", 0, outputADDInstruction);
+    auto addOutput = [](std::stringstream &ss, const std::string &dest,
+                        const std::string &src) {
+      outputInstruction(ss, "add", dest, src);
+    };
+    ArithmeticImmediateRegMemHandler handler("ADD (imm to reg/mem)", 0,
+                                             addOutput);
     return handler.decode(ss, bytestream, baseOffset);
   }
   case 5: {
     // SUB immediate to reg/mem
-    ArithmeticImmediateRegMemHandler handler("SUB (imm to reg/mem)", 5, outputSUBInstruction);
+    auto subOutput = [](std::stringstream &ss, const std::string &dest,
+                        const std::string &src) {
+      outputInstruction(ss, "sub", dest, src);
+    };
+    ArithmeticImmediateRegMemHandler handler("SUB (imm to reg/mem)", 5,
+                                             subOutput);
     return handler.decode(ss, bytestream, baseOffset);
   }
   case 7: {
     // CMP immediate to reg/mem
-    ArithmeticImmediateRegMemHandler handler("CMP (imm to reg/mem)", 7, outputCMPInstruction);
+    auto cmpOutput = [](std::stringstream &ss, const std::string &dest,
+                        const std::string &src) {
+      outputInstruction(ss, "cmp", dest, src);
+    };
+    ArithmeticImmediateRegMemHandler handler("CMP (imm to reg/mem)", 7,
+                                             cmpOutput);
     return handler.decode(ss, bytestream, baseOffset);
   }
   default:
