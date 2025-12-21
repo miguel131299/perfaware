@@ -270,7 +270,7 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
           const char *mnemonic = nullptr;
           if (opcode >= 0x70 && opcode <= 0x7F) {
             static const char *jump_mn[] = {
-                "jo", "jno", "jb", "jnb", "je", "jne", "jbe", "ja",
+                "jo", "jno", "jb", "jnb", "je", "jnz", "jbe", "ja",
                 "js", "jns", "jp", "jnp", "jl", "jnl", "jle", "jg"};
             mnemonic = jump_mn[opcode - 0x70];
           } else if (opcode >= 0xE0 && opcode <= 0xE3) {
@@ -283,8 +283,10 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
           int32_t target =
               static_cast<int32_t>(instr.byteOffset + 2 + displacement);
 
-          // Output with label
-          ss << mnemonic << " " << targetToLabel[target] << "\n";
+          // Output with label (mnemonic should not be null)
+          if (mnemonic) {
+            ss << mnemonic << " " << targetToLabel[target] << "\n";
+          }
         } else {
           // Regular instruction
           handler->decode(ss, bytestream, instr.byteOffset);
