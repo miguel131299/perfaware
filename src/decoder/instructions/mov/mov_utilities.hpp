@@ -37,7 +37,7 @@ inline MODEncoding getMODEncoding(uint8_t byte) {
 // Helper to format and output MOV instruction
 inline void outputMOVInstruction(std::stringstream &ss, const std::string &dest,
                                  const std::string &src) {
-  ss << std::format("mov {}, {}\n", dest, src);
+  ss << std::format("MOV {}, {}\n", dest, src);
 }
 
 //-----------------------------------------------------------------------------

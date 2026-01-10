@@ -55,7 +55,7 @@ createInstructionRegistry() {
   auto addRegMemHandler = std::make_unique<GenericRegMemHandler>(
       "ADD (reg/mem)",
       [](std::stringstream &ss, const std::string &dest,
-         const std::string &src) { outputInstruction(ss, "add", dest, src); });
+         const std::string &src) { outputInstruction(ss, "ADD", dest, src); });
   registry[0b00000000] = {0b11111100, std::move(addRegMemHandler)};
 
   auto addImmediateAccumulatorHandler =
@@ -63,7 +63,7 @@ createInstructionRegistry() {
           "ADD (imm to accumulator)",
           [](std::stringstream &ss, const std::string &dest,
              const std::string &src) {
-            outputInstruction(ss, "add", dest, src);
+            outputInstruction(ss, "ADD", dest, src);
           });
   registry[0b00000100] = {0b11111110,
                           std::move(addImmediateAccumulatorHandler)};
@@ -72,7 +72,7 @@ createInstructionRegistry() {
   auto subRegMemHandler = std::make_unique<GenericRegMemHandler>(
       "SUB (reg/mem)",
       [](std::stringstream &ss, const std::string &dest,
-         const std::string &src) { outputInstruction(ss, "sub", dest, src); });
+         const std::string &src) { outputInstruction(ss, "SUB", dest, src); });
   registry[0b00101000] = {0b11111100, std::move(subRegMemHandler)};
 
   auto subImmediateAccumulatorHandler =
@@ -80,7 +80,7 @@ createInstructionRegistry() {
           "SUB (imm to accumulator)",
           [](std::stringstream &ss, const std::string &dest,
              const std::string &src) {
-            outputInstruction(ss, "sub", dest, src);
+            outputInstruction(ss, "SUB", dest, src);
           });
   registry[0b00101100] = {0b11111110,
                           std::move(subImmediateAccumulatorHandler)};
@@ -89,7 +89,7 @@ createInstructionRegistry() {
   auto cmpRegMemHandler = std::make_unique<GenericRegMemHandler>(
       "CMP (reg/mem)",
       [](std::stringstream &ss, const std::string &dest,
-         const std::string &src) { outputInstruction(ss, "cmp", dest, src); });
+         const std::string &src) { outputInstruction(ss, "CMP", dest, src); });
   registry[0b00111000] = {0b11111100, std::move(cmpRegMemHandler)};
 
   auto cmpImmediateAccumulatorHandler =
@@ -97,7 +97,7 @@ createInstructionRegistry() {
           "CMP (imm to accumulator)",
           [](std::stringstream &ss, const std::string &dest,
              const std::string &src) {
-            outputInstruction(ss, "cmp", dest, src);
+            outputInstruction(ss, "CMP", dest, src);
           });
   registry[0b00111100] = {0b11111110,
                           std::move(cmpImmediateAccumulatorHandler)};
@@ -135,14 +135,14 @@ createInstructionRegistry() {
 }
 
 //-----------------------------------------------------------------------------
-// Print the instruction that was just decoded to stderr for debugging
-static void printDecodedInstruction(const std::stringstream &ss,
-                                    size_t posBefore, size_t posAfter) {
-  std::string instruction = ss.str().substr(posBefore, posAfter - posBefore);
-  if (!instruction.empty()) {
-    std::cerr << instruction;
-  }
-}
+// // Print the instruction that was just decoded to stderr for debugging
+// static void printDecodedInstruction(const std::stringstream &ss,
+//                                     size_t posBefore, size_t posAfter) {
+//   std::string instruction = ss.str().substr(posBefore, posAfter - posBefore);
+//   if (!instruction.empty()) {
+//     std::cerr << instruction;
+//   }
+// }
 
 //-----------------------------------------------------------------------------
 // Helper structure to track instruction offsets and their types
@@ -261,7 +261,7 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
     for (const auto &[pattern, maskAndHandler] : registry) {
       const auto &[mask, handler] = maskAndHandler;
       if ((opcode & mask) == pattern) {
-        size_t posBefore = ss.str().length();
+        // size_t posBefore = ss.str().length();
 
         // For jump instructions, we need special handling to use labels instead
         // of offsets
@@ -296,8 +296,8 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
           ss << instr.decodedOutput;
         }
 
-        size_t posAfter = ss.str().length();
-        printDecodedInstruction(ss, posBefore, posAfter);
+        // size_t posAfter = ss.str().length();
+        // printDecodedInstruction(ss, posBefore, posAfter);
         break;
       }
     }

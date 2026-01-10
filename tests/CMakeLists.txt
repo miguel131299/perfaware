@@ -1,6 +1,7 @@
 set(TEST_SOURCES
         main.cpp
         test_decoder.cpp
+        test_simulator.cpp
 )
 
 add_executable(sim8086_tests ${TEST_SOURCES})

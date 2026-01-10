@@ -20,7 +20,7 @@ ImmediateRegMemGroupHandler::decode(std::stringstream &ss,
     // ADD immediate to reg/mem
     auto addOutput = [](std::stringstream &ss, const std::string &dest,
                         const std::string &src) {
-      outputInstruction(ss, "add", dest, src);
+      outputInstruction(ss, "ADD", dest, src);
     };
     ArithmeticImmediateRegMemHandler handler("ADD (imm to reg/mem)", 0,
                                              addOutput);
@@ -30,7 +30,7 @@ ImmediateRegMemGroupHandler::decode(std::stringstream &ss,
     // SUB immediate to reg/mem
     auto subOutput = [](std::stringstream &ss, const std::string &dest,
                         const std::string &src) {
-      outputInstruction(ss, "sub", dest, src);
+      outputInstruction(ss, "SUB", dest, src);
     };
     ArithmeticImmediateRegMemHandler handler("SUB (imm to reg/mem)", 5,
                                              subOutput);
@@ -40,7 +40,7 @@ ImmediateRegMemGroupHandler::decode(std::stringstream &ss,
     // CMP immediate to reg/mem
     auto cmpOutput = [](std::stringstream &ss, const std::string &dest,
                         const std::string &src) {
-      outputInstruction(ss, "cmp", dest, src);
+      outputInstruction(ss, "CMP", dest, src);
     };
     ArithmeticImmediateRegMemHandler handler("CMP (imm to reg/mem)", 7,
                                              cmpOutput);

@@ -46,6 +46,7 @@ set(SIM8086_SOURCES
       src/decoder/instructions/mov/mov_immediate_regmem_handler.cpp
       src/decoder/instructions/mov/mov_mem_accumulator_handler.cpp
       src/decoder/instructions/mov/mov_accumulator_mem_handler.cpp
+      src/simulator/simulator.cpp
       src/utils/utils.cpp
 )
 
@@ -53,6 +54,7 @@ set(SIM8086_SOURCES
 add_library(sim8086_core STATIC ${SIM8086_SOURCES})
 target_include_directories(sim8086_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(sim8086_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/decoder)
+target_include_directories(sim8086_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/simulator)
 
 # Main Binary
 add_executable(sim8086 src/main.cpp)
