@@ -43,14 +43,38 @@ Simulator::Simulator(const std::vector<char> &bytestream)
       {"BP", [this](uint16_t v) { registers.bp = v; }},
       {"SI", [this](uint16_t v) { registers.si = v; }},
       {"DI", [this](uint16_t v) { registers.di = v; }},
-      {"AH", [this](uint16_t v) { registers.ax = (registers.ax & 0xFF) | ((v & 0xFF) << 8); }},
-      {"BH", [this](uint16_t v) { registers.bx = (registers.bx & 0xFF) | ((v & 0xFF) << 8); }},
-      {"CH", [this](uint16_t v) { registers.cx = (registers.cx & 0xFF) | ((v & 0xFF) << 8); }},
-      {"DH", [this](uint16_t v) { registers.dx = (registers.dx & 0xFF) | ((v & 0xFF) << 8); }},
-      {"AL", [this](uint16_t v) { registers.ax = (registers.ax & 0xFF00) | (v & 0xFF); }},
-      {"BL", [this](uint16_t v) { registers.bx = (registers.bx & 0xFF00) | (v & 0xFF); }},
-      {"CL", [this](uint16_t v) { registers.cx = (registers.cx & 0xFF00) | (v & 0xFF); }},
-      {"DL", [this](uint16_t v) { registers.dx = (registers.dx & 0xFF00) | (v & 0xFF); }},
+      {"AH",
+       [this](uint16_t v) {
+         registers.ax = (registers.ax & 0xFF) | ((v & 0xFF) << 8);
+       }},
+      {"BH",
+       [this](uint16_t v) {
+         registers.bx = (registers.bx & 0xFF) | ((v & 0xFF) << 8);
+       }},
+      {"CH",
+       [this](uint16_t v) {
+         registers.cx = (registers.cx & 0xFF) | ((v & 0xFF) << 8);
+       }},
+      {"DH",
+       [this](uint16_t v) {
+         registers.dx = (registers.dx & 0xFF) | ((v & 0xFF) << 8);
+       }},
+      {"AL",
+       [this](uint16_t v) {
+         registers.ax = (registers.ax & 0xFF00) | (v & 0xFF);
+       }},
+      {"BL",
+       [this](uint16_t v) {
+         registers.bx = (registers.bx & 0xFF00) | (v & 0xFF);
+       }},
+      {"CL",
+       [this](uint16_t v) {
+         registers.cx = (registers.cx & 0xFF00) | (v & 0xFF);
+       }},
+      {"DL",
+       [this](uint16_t v) {
+         registers.dx = (registers.dx & 0xFF00) | (v & 0xFF);
+       }},
   };
 
   decodeAllInstructions();
@@ -71,19 +95,27 @@ void Simulator::step() {
   const DecodedInstruction &decodedInstr =
       instructions[currentInstructionIndex];
 
-  // Capture old register value before execution (for MOV operations)
+  // Capture old register value before execution (for MOV/ADD/SUB operations)
+  // CMP doesn't modify registers, so skip tracking for it
   uint16_t oldValue = 0;
   bool trackRegister = false;
   std::string regName;
 
-  if (isRegister(decodedInstr.parsed.destOp)) {
+  if (isRegister(decodedInstr.parsed.destOp) &&
+      decodedInstr.parsed.mnemonic != "CMP") {
     regName = decodedInstr.parsed.destOp;
     oldValue = getRegisterValue(regName);
     trackRegister = true;
   }
 
+  // Capture old flag state before execution
+  std::string oldFlags = getFlagString();
+
   // Execute instruction
   executeInstruction(decodedInstr.parsed);
+
+  // Get new flag state after execution
+  std::string newFlags = getFlagString();
 
   // Output trace
   traceOutput << decodedInstr.decoded;
@@ -92,6 +124,16 @@ void Simulator::step() {
     traceOutput << " ; " << regName << ":0x" << std::hex << oldValue << "->0x"
                 << newValue << std::dec;
   }
+
+  // Output flag changes if any
+  if (oldFlags != newFlags) {
+    // Only add semicolon if we didn't already output register change
+    if (!trackRegister) {
+      traceOutput << " ;";
+    }
+    traceOutput << " flags:" << oldFlags << "->" << newFlags;
+  }
+
   traceOutput << "\n";
 
   currentInstructionIndex++;
@@ -131,28 +173,68 @@ std::string Simulator::dumpState() const {
   std::ostringstream oss;
   oss << "Final registers:\n";
 
-  // Format each 16-bit register
-  oss << "      ax: 0x" << std::hex << std::setfill('0') << std::setw(4)
-      << registers.ax << " (" << std::dec << registers.ax << ")\n";
-  oss << "      bx: 0x" << std::hex << std::setfill('0') << std::setw(4)
-      << registers.bx << " (" << std::dec << registers.bx << ")\n";
-  oss << "      cx: 0x" << std::hex << std::setfill('0') << std::setw(4)
-      << registers.cx << " (" << std::dec << registers.cx << ")\n";
-  oss << "      dx: 0x" << std::hex << std::setfill('0') << std::setw(4)
-      << registers.dx << " (" << std::dec << registers.dx << ")\n";
-  oss << "      sp: 0x" << std::hex << std::setfill('0') << std::setw(4)
-      << registers.sp << " (" << std::dec << registers.sp << ")\n";
-  oss << "      bp: 0x" << std::hex << std::setfill('0') << std::setw(4)
-      << registers.bp << " (" << std::dec << registers.bp << ")\n";
-  oss << "      si: 0x" << std::hex << std::setfill('0') << std::setw(4)
-      << registers.si << " (" << std::dec << registers.si << ")\n";
-  oss << "      di: 0x" << std::hex << std::setfill('0') << std::setw(4)
-      << registers.di << " (" << std::dec << registers.di << ")\n";
+  // Only output non-zero registers
+  if (registers.ax != 0) {
+    oss << "      ax: 0x" << std::hex << std::setfill('0') << std::setw(4)
+        << registers.ax << " (" << std::dec << registers.ax << ")\n";
+  }
+  if (registers.bx != 0) {
+    oss << "      bx: 0x" << std::hex << std::setfill('0') << std::setw(4)
+        << registers.bx << " (" << std::dec << registers.bx << ")\n";
+  }
+  if (registers.cx != 0) {
+    oss << "      cx: 0x" << std::hex << std::setfill('0') << std::setw(4)
+        << registers.cx << " (" << std::dec << registers.cx << ")\n";
+  }
+  if (registers.dx != 0) {
+    oss << "      dx: 0x" << std::hex << std::setfill('0') << std::setw(4)
+        << registers.dx << " (" << std::dec << registers.dx << ")\n";
+  }
+  if (registers.sp != 0) {
+    oss << "      sp: 0x" << std::hex << std::setfill('0') << std::setw(4)
+        << registers.sp << " (" << std::dec << registers.sp << ")\n";
+  }
+  if (registers.bp != 0) {
+    oss << "      bp: 0x" << std::hex << std::setfill('0') << std::setw(4)
+        << registers.bp << " (" << std::dec << registers.bp << ")\n";
+  }
+  if (registers.si != 0) {
+    oss << "      si: 0x" << std::hex << std::setfill('0') << std::setw(4)
+        << registers.si << " (" << std::dec << registers.si << ")\n";
+  }
+  if (registers.di != 0) {
+    oss << "      di: 0x" << std::hex << std::setfill('0') << std::setw(4)
+        << registers.di << " (" << std::dec << registers.di << ")\n";
+  }
+
+  // Output final flags if any are set
+  std::string flags = getFlagString();
+  if (!flags.empty()) {
+    oss << "   flags: " << flags << "\n";
+  }
 
   return oss.str();
 }
 
 std::string Simulator::getTrace() const { return traceOutput.str(); }
+
+std::string Simulator::getFlagString() const {
+  // Build flag string with flags in order: C, P, Z, S, O
+  // For this simulator we track: P (parity), Z (zero), S (sign), C (carry), O
+  // (overflow)
+  std::string flags;
+  if (registers.flags.carry)
+    flags += "C";
+  if (registers.flags.parity)
+    flags += "P";
+  if (registers.flags.zero)
+    flags += "Z";
+  if (registers.flags.sign)
+    flags += "S";
+  if (registers.flags.overflow)
+    flags += "O";
+  return flags;
+}
 
 Simulator::Instruction Simulator::parseInstruction(const std::string &decoded) {
   // Lambda to trim whitespace (returns trimmed copy)
@@ -206,6 +288,20 @@ void Simulator::executeInstruction(const Instruction &instr) {
   // Add more instruction types as needed
 }
 
+void Simulator::handleZeroFlag(uint16_t val) {
+  registers.flags.zero = (val == 0);
+}
+
+void Simulator::handleSignFlag(uint16_t val) {
+  registers.flags.sign = ((val & 0x8000) != 0);
+}
+
+void Simulator::handleCarryFlag(bool carry) { registers.flags.carry = carry; }
+
+void Simulator::handleOverflowFlag(bool overflow) {
+  registers.flags.overflow = overflow;
+}
+
 void Simulator::executeMov(const std::string &dest, const std::string &src) {
   // 1. Resolve source operand to a value
   uint16_t srcVal = resolveOperand(src);
@@ -213,31 +309,74 @@ void Simulator::executeMov(const std::string &dest, const std::string &src) {
   setOperand(dest, srcVal);
 }
 
-void Simulator::executeAdd(const std::string &dest, const std::string &src) {
-  // TODO: ADD dest, src
-  // 1. Resolve both operands
-  // 2. Add them: result = dest + src
-  // 3. Set destination to result
-  // 4. Update flags based on result
-  // 5. Handle overflow/carry detection
+void Simulator::handleParityFlag(uint16_t val) {
+  // Parity is based on lower 8 bits - count number of 1 bits
+  uint8_t lowByte = val & 0xFF;
+  int count = 0;
+  while (lowByte) {
+    count += lowByte & 1;
+    lowByte >>= 1;
+  }
+  // Parity flag set if even number of 1 bits
+  registers.flags.parity = (count % 2 == 0);
+}
 
-  throw std::runtime_error("executeAdd() not implemented");
+void Simulator::executeAdd(const std::string &dest, const std::string &src) {
+  uint16_t srcVal = resolveOperand(src);
+  uint16_t destVal = resolveOperand(dest);
+
+  // Calculate result and detect carry/overflow
+  uint32_t result32 =
+      static_cast<uint32_t>(destVal) + static_cast<uint32_t>(srcVal);
+  uint16_t result = static_cast<uint16_t>(result32);
+
+  // Carry: result overflowed 16 bits
+  bool carry = (result32 > 0xFFFF);
+
+  // Overflow: sign of operands same, but result sign different
+  bool destSign = (destVal & 0x8000) != 0;
+  bool srcSign = (srcVal & 0x8000) != 0;
+  bool resultSign = (result & 0x8000) != 0;
+  bool overflow = (destSign == srcSign) && (destSign != resultSign);
+
+  setOperand(dest, result);
+  setFlags(result, carry, overflow);
 }
 
 void Simulator::executeSub(const std::string &dest, const std::string &src) {
-  // TODO: SUB dest, src
-  // Similar to ADD but: result = dest - src
-  // Update flags appropriately
-
-  throw std::runtime_error("executeSub() not implemented");
+  performSubtraction(dest, src, true);
 }
 
 void Simulator::executeCmp(const std::string &dest, const std::string &src) {
-  // TODO: CMP dest, src
-  // Like SUB but only updates flags, doesn't store result
-  // result = dest - src (for flags only, not stored)
+  performSubtraction(dest, src, false);
+}
 
-  throw std::runtime_error("executeCmp() not implemented");
+void Simulator::performSubtraction(const std::string &dest,
+                                   const std::string &src, bool storeResult) {
+  uint16_t srcVal = resolveOperand(src);
+  uint16_t destVal = resolveOperand(dest);
+
+  // Calculate result and detect borrow (carry) and overflow
+  int32_t result32 =
+      static_cast<int32_t>(destVal) - static_cast<int32_t>(srcVal);
+  uint16_t result = static_cast<uint16_t>(result32);
+
+  // Carry/Borrow: result underflowed (destVal < srcVal in unsigned)
+  bool carry = (destVal < srcVal);
+
+  // Overflow: signs different in operands, result sign different from dest
+  bool destSign = (destVal & 0x8000) != 0;
+  bool srcSign = (srcVal & 0x8000) != 0;
+  bool resultSign = (result & 0x8000) != 0;
+  bool overflow = (destSign != srcSign) && (destSign != resultSign);
+
+  // Only store result if this is SUB, not CMP
+  if (storeResult) {
+    setOperand(dest, result);
+  }
+
+  // Always update flags
+  setFlags(result, carry, overflow);
 }
 
 void Simulator::executeJump(const std::string &mnemonic) {
@@ -297,14 +436,11 @@ void Simulator::setOperand(const std::string &operand, uint16_t value) {
 }
 
 void Simulator::setFlags(uint16_t result, bool carry, bool overflow) {
-  // TODO: Update flag register
-  // - Zero flag: set if result == 0
-  // - Sign flag: set if MSB (bit 15) is 1
-  // - Carry flag: already provided as parameter
-  // - Overflow flag: already provided as parameter
-  // - Parity flag: set if lower 8 bits has even number of 1s
-
-  throw std::runtime_error("setFlags() not implemented");
+  handleZeroFlag(result);
+  handleSignFlag(result);
+  handleCarryFlag(carry);
+  handleOverflowFlag(overflow);
+  handleParityFlag(result);
 }
 
 bool Simulator::shouldJump(const std::string &mnemonic) const {

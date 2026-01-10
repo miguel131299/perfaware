@@ -86,6 +86,9 @@ class Simulator {
   void executeCmp(const std::string& dest, const std::string& src);
   void executeJump(const std::string& mnemonic);
 
+  // Helper: Perform subtraction with flag updates (shared by SUB and CMP)
+  void performSubtraction(const std::string& dest, const std::string& src, bool storeResult);
+
   // Helper: Resolve operand value
   // "AX" -> 0x1234, "[BX + SI]" -> memory[bx+si], "5" -> 5, etc.
   uint16_t resolveOperand(const std::string& operand);
@@ -96,6 +99,16 @@ class Simulator {
 
   // Helper: Update flags after arithmetic operations
   void setFlags(uint16_t result, bool carry = false, bool overflow = false);
+
+  // Helper: Flag update functions for individual flags
+  void handleZeroFlag(uint16_t val);
+  void handleSignFlag(uint16_t val);
+  void handleCarryFlag(bool carry);
+  void handleOverflowFlag(bool overflow);
+  void handleParityFlag(uint16_t val);
+
+  // Helper: Get flag state as string (e.g., "SPZ" for Sign, Parity, Zero)
+  std::string getFlagString() const;
 
   // Helper: Check if a jump condition is met
   bool shouldJump(const std::string& mnemonic) const;

@@ -105,4 +105,5 @@ TEST_P(SimulatorTest, ExecutionOutput) {
 INSTANTIATE_TEST_SUITE_P(
     SimulatorExecution, SimulatorTest,
     ::testing::Values(SimulatorTestParameters{"listing_0043_immediate_movs"},
-                      SimulatorTestParameters{"listing_0044_register_movs"}));
+                      SimulatorTestParameters{"listing_0044_register_movs"},
+                      SimulatorTestParameters{"listing_0046_add_sub_cmp"}));
