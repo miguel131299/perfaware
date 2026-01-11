@@ -12,7 +12,8 @@
 #include <unordered_map>
 
 Simulator::Simulator(const std::vector<char> &bytestream, bool trackIPRegister)
-    : memory(65536, 0), bytestream(bytestream), trackIPRegister(trackIPRegister) {
+    : memory(65536, 0), bytestream(bytestream),
+      trackIPRegister(trackIPRegister) {
   // Initialize register getter map - each instance has its own capturing this
   getRegisterMap = {
       {"AX", [this]() { return registers.ax; }},
@@ -87,16 +88,16 @@ void Simulator::run() {
 void Simulator::step() { decodeAndExecuteStep(); }
 
 bool Simulator::decodeAndExecuteStep() {
-  if (instructionPointer >= bytestream.size()) {
+  if (registers.ip >= bytestream.size()) {
     return false; // End of program
   }
 
   // Capture old IP before execution
-  uint32_t oldIP = instructionPointer;
+  uint32_t oldIP = registers.ip;
 
   // Decode one instruction at current IP
   auto [decodedStr, nextIP] =
-      Decoder::decodeOneInstruction(bytestream, instructionPointer);
+      Decoder::decodeOneInstruction(bytestream, registers.ip);
 
   if (decodedStr.empty()) {
     return false; // End of program
@@ -125,18 +126,20 @@ bool Simulator::decodeAndExecuteStep() {
   // Capture old flag state before execution
   std::string oldFlags = getFlagString();
 
-  // Execute instruction
-  executeInstruction(parsed);
+  // Execute instruction and get next IP
+  uint32_t actualNextIP =
+      executeInstruction(parsed, registers.ip, nextIP);
+  registers.ip = actualNextIP;
 
   // Get new flag state after execution
   std::string newFlags = getFlagString();
 
   // Output trace
   traceOutput << decodedStr;
-  
+
   // Track whether we've started the comment section
   bool hasComment = false;
-  
+
   if (trackRegister) {
     uint16_t newValue = getRegisterValue(regName);
     traceOutput << " ; " << regName << ":0x" << std::hex << oldValue << "->0x"
@@ -150,7 +153,7 @@ bool Simulator::decodeAndExecuteStep() {
       traceOutput << " ;";
       hasComment = true;
     }
-    traceOutput << " ip:0x" << std::hex << oldIP << "->0x" << nextIP
+    traceOutput << " ip:0x" << std::hex << oldIP << "->0x" << actualNextIP
                 << std::dec;
   }
 
@@ -164,7 +167,6 @@ bool Simulator::decodeAndExecuteStep() {
 
   traceOutput << "\n";
 
-  instructionPointer = nextIP;
   return true;
 }
 
@@ -209,8 +211,7 @@ std::string Simulator::dumpState() const {
   // Output IP register if tracking is enabled
   if (trackIPRegister) {
     oss << "      ip: 0x" << std::hex << std::setfill('0') << std::setw(4)
-        << instructionPointer << " (" << std::dec << instructionPointer
-        << ")\n";
+        << registers.ip << " (" << std::dec << registers.ip << ")\n";
   }
 
   // Output final flags if any are set
@@ -226,7 +227,8 @@ std::string Simulator::getTrace() const { return traceOutput.str(); }
 
 std::string Simulator::getFlagString() const {
   // Build flag string with flags in order: C, P, A, Z, S, O
-  // For this simulator we track: C (carry), P (parity), A (auxiliary), Z (zero), S (sign), O (overflow)
+  // For this simulator we track: C (carry), P (parity), A (auxiliary), Z
+  // (zero), S (sign), O (overflow)
   std::string flags;
   if (registers.flags.carry)
     flags += "C";
@@ -279,7 +281,8 @@ Simulator::Instruction Simulator::parseInstruction(const std::string &decoded) {
   return Instruction{mnemonic, destOp, srcOp};
 }
 
-void Simulator::executeInstruction(const Instruction &instr) {
+uint32_t Simulator::executeInstruction(const Instruction &instr,
+                                        uint32_t currentIP, uint32_t nextIP) {
   // TODO: Dispatch to appropriate executor based on mnemonic
   if (instr.mnemonic == "MOV") {
     executeMov(instr.destOp, instr.srcOp);
@@ -289,10 +292,12 @@ void Simulator::executeInstruction(const Instruction &instr) {
     executeSub(instr.destOp, instr.srcOp);
   } else if (instr.mnemonic == "CMP") {
     executeCmp(instr.destOp, instr.srcOp);
-  } else if (instr.mnemonic.find('J') == 0) { // All jumps start with 'j'
-    executeJump(instr.mnemonic);
+  } else if (instr.mnemonic[0] == 'J') {
+    // Jumps return potentially different next IP
+    return executeJump(instr.mnemonic, currentIP, nextIP);
   }
-  // Add more instruction types as needed
+  // Non-jump instructions advance normally
+  return nextIP;
 }
 
 void Simulator::handleZeroFlag(uint16_t val) {
@@ -369,6 +374,15 @@ void Simulator::executeCmp(const std::string &dest, const std::string &src) {
   performSubtraction(dest, src, false);
 }
 
+uint32_t Simulator::executeJump(const std::string &mnemonic, uint32_t currentIP,
+                                uint32_t nextIP) {
+  if (shouldJump(mnemonic)) {
+    int8_t displacement = readDisplacement(currentIP);
+    return calculateJumpTarget(currentIP, displacement);
+  }
+  return nextIP;  // No jump condition met, return normal next instruction
+}
+
 void Simulator::performSubtraction(const std::string &dest,
                                    const std::string &src, bool storeResult) {
   uint16_t srcVal = resolveOperand(src);
@@ -399,18 +413,6 @@ void Simulator::performSubtraction(const std::string &dest,
   // Always update flags
   setFlags(result, carry, overflow);
   registers.flags.auxiliary = (auxBorrow != 0);
-}
-
-void Simulator::executeJump(const std::string &mnemonic) {
-  // TODO: Handle jumps (JE, JNZ, JL, LOOP, etc.)
-  // 1. Check if jump condition is met
-  // 2. If yes: read displacement from next byte and update IP
-  // 3. If no: just advance IP normally
-  //
-  // The displacement is a signed 8-bit value after the opcode
-  // Target = IP + 2 + displacement
-
-  throw std::runtime_error("executeJump() not implemented");
 }
 
 uint16_t Simulator::resolveOperand(const std::string &operand) {
@@ -465,19 +467,66 @@ void Simulator::setFlags(uint16_t result, bool carry, bool overflow) {
   handleParityFlag(result);
 }
 
-bool Simulator::shouldJump(const std::string &mnemonic) const {
-  // TODO: Check if a conditional jump should be taken
-  // Map mnemonics to flag conditions:
-  // - "je" (jump if equal): zero flag set
-  // - "jnz" (jump if not zero): zero flag clear
-  // - "jl" (jump if less): sign flag != overflow flag
-  // - "jb" (jump if below): carry flag set
-  // - "js" (jump if sign): sign flag set
-  // - etc.
-  //
-  // For unconditional jumps (jmp, loop, loopz, etc.), return true
+int8_t Simulator::readDisplacement(uint32_t offset) {
+  if (offset + 1 >= bytestream.size()) {
+    throw std::runtime_error("Cannot read displacement: out of bounds");
+  }
+  return static_cast<int8_t>(bytestream[offset + 1]);
+}
 
-  throw std::runtime_error("shouldJump() not implemented");
+uint32_t Simulator::calculateJumpTarget(uint32_t currentIP,
+                                        int8_t displacement) {
+  // Target is current IP + 2 (opcode + displacement byte) + displacement
+  int32_t target =
+      static_cast<int32_t>(currentIP) + 2 + static_cast<int32_t>(displacement);
+
+  // Ensure target stays within bytecode bounds
+  if (target < 0 || target > static_cast<int32_t>(bytestream.size())) {
+    throw std::runtime_error("Jump target out of bounds");
+  }
+
+  return static_cast<uint32_t>(target);
+}
+
+bool Simulator::shouldJump(const std::string &mnemonic) const {
+  // Conditional jumps based on flags
+  if (mnemonic == "JE" || mnemonic == "JZ") {
+    return registers.flags.zero;
+  } else if (mnemonic == "JNE" || mnemonic == "JNZ") {
+    return !registers.flags.zero;
+  } else if (mnemonic == "JB" || mnemonic == "JNAE" || mnemonic == "JC") {
+    return registers.flags.carry;
+  } else if (mnemonic == "JNB" || mnemonic == "JAE" || mnemonic == "JNC") {
+    return !registers.flags.carry;
+  } else if (mnemonic == "JL" || mnemonic == "JNGE") {
+    return registers.flags.sign != registers.flags.overflow;
+  } else if (mnemonic == "JNL" || mnemonic == "JGE") {
+    return registers.flags.sign == registers.flags.overflow;
+  } else if (mnemonic == "JLE" || mnemonic == "JNG") {
+    return registers.flags.zero ||
+           (registers.flags.sign != registers.flags.overflow);
+  } else if (mnemonic == "JG" || mnemonic == "JNLE") {
+    return !registers.flags.zero &&
+           (registers.flags.sign == registers.flags.overflow);
+  } else if (mnemonic == "JBE" || mnemonic == "JNA") {
+    return registers.flags.carry || registers.flags.zero;
+  } else if (mnemonic == "JA" || mnemonic == "JNBE") {
+    return !registers.flags.carry && !registers.flags.zero;
+  } else if (mnemonic == "JS") {
+    return registers.flags.sign;
+  } else if (mnemonic == "JNS") {
+    return !registers.flags.sign;
+  } else if (mnemonic == "JP" || mnemonic == "JPE") {
+    return registers.flags.parity;
+  } else if (mnemonic == "JNP" || mnemonic == "JPO") {
+    return !registers.flags.parity;
+  } else if (mnemonic == "JO") {
+    return registers.flags.overflow;
+  } else if (mnemonic == "JNO") {
+    return !registers.flags.overflow;
+  }
+  // Unconditional jumps
+  return true;
 }
 
 uint16_t &Simulator::getRegister(const std::string &regName) {

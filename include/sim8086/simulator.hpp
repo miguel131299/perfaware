@@ -43,6 +43,7 @@ private:
   struct Registers {
     uint16_t ax = 0, bx = 0, cx = 0, dx = 0;
     uint16_t sp = 0, bp = 0, si = 0, di = 0;
+    uint32_t ip = 0;  // Instruction pointer (byte offset into bytestream)
 
     struct Flags {
       bool zero = false;
@@ -60,9 +61,6 @@ private:
   // Bytecode to execute
   const std::vector<char> &bytestream;
 
-  // Current instruction pointer (byte offset into bytestream)
-  uint32_t instructionPointer = 0;
-
   // Whether to track IP register changes in trace output
   bool trackIPRegister = false;
 
@@ -77,15 +75,17 @@ private:
   // E.g., "mov AX, BX" -> Instruction{"mov", "AX", "BX"}
   Instruction parseInstruction(const std::string &decoded);
 
-  // Execute an instruction
-  void executeInstruction(const Instruction &instr);
+  // Execute an instruction and return the next instruction pointer
+  uint32_t executeInstruction(const Instruction &instr, uint32_t currentIP,
+                              uint32_t nextIP);
 
   // Instruction executors
   void executeMov(const std::string &dest, const std::string &src);
   void executeAdd(const std::string &dest, const std::string &src);
   void executeSub(const std::string &dest, const std::string &src);
   void executeCmp(const std::string &dest, const std::string &src);
-  void executeJump(const std::string &mnemonic);
+  uint32_t executeJump(const std::string &mnemonic, uint32_t currentIP,
+                       uint32_t nextIP);
 
   // Helper: Perform subtraction with flag updates (shared by SUB and CMP)
   void performSubtraction(const std::string &dest, const std::string &src,
@@ -115,6 +115,12 @@ private:
 
   // Helper: Check if a jump condition is met
   bool shouldJump(const std::string &mnemonic) const;
+
+  // Helper: Read signed displacement byte from bytecode at given offset
+  int8_t readDisplacement(uint32_t offset);
+
+  // Helper: Calculate jump target from current IP and displacement
+  uint32_t calculateJumpTarget(uint32_t currentIP, int8_t displacement);
 
   // Helper: Get register value by name
   // "AX" -> 0x1234, "AL" -> 0x34 (lower byte), "AH" -> 0x12 (upper byte)

@@ -108,28 +108,22 @@ createInstructionRegistry() {
   registry[0b10000000] = {0b11111100, std::move(immediateRegMemGroupHandler)};
 
   // Jump instructions (all use generic jump handler with 8-bit displacement)
-  registry[0x70] = {0xFF, std::make_unique<GenericJumpHandler>("jo")};
-  registry[0x71] = {0xFF, std::make_unique<GenericJumpHandler>("jno")};
-  registry[0x72] = {0xFF, std::make_unique<GenericJumpHandler>("jb")};
-  registry[0x73] = {0xFF, std::make_unique<GenericJumpHandler>("jnb")};
-  registry[0x74] = {0xFF, std::make_unique<GenericJumpHandler>("je")};
-  registry[0x75] = {0xFF, std::make_unique<GenericJumpHandler>("jnz")};
-  registry[0x76] = {0xFF, std::make_unique<GenericJumpHandler>("jbe")};
-  registry[0x77] = {0xFF, std::make_unique<GenericJumpHandler>("ja")};
-  registry[0x78] = {0xFF, std::make_unique<GenericJumpHandler>("js")};
-  registry[0x79] = {0xFF, std::make_unique<GenericJumpHandler>("jns")};
-  registry[0x7A] = {0xFF, std::make_unique<GenericJumpHandler>("jp")};
-  registry[0x7B] = {0xFF, std::make_unique<GenericJumpHandler>("jnp")};
-  registry[0x7C] = {0xFF, std::make_unique<GenericJumpHandler>("jl")};
-  registry[0x7D] = {0xFF, std::make_unique<GenericJumpHandler>("jnl")};
-  registry[0x7E] = {0xFF, std::make_unique<GenericJumpHandler>("jle")};
-  registry[0x7F] = {0xFF, std::make_unique<GenericJumpHandler>("jg")};
-
-  // Loop instructions (8-bit displacement)
-  registry[0xE0] = {0xFF, std::make_unique<GenericJumpHandler>("loopnz")};
-  registry[0xE1] = {0xFF, std::make_unique<GenericJumpHandler>("loopz")};
-  registry[0xE2] = {0xFF, std::make_unique<GenericJumpHandler>("loop")};
-  registry[0xE3] = {0xFF, std::make_unique<GenericJumpHandler>("jcxz")};
+  registry[0x70] = {0xFF, std::make_unique<GenericJumpHandler>("JO")};
+  registry[0x71] = {0xFF, std::make_unique<GenericJumpHandler>("JNO")};
+  registry[0x72] = {0xFF, std::make_unique<GenericJumpHandler>("JB")};
+  registry[0x73] = {0xFF, std::make_unique<GenericJumpHandler>("JNB")};
+  registry[0x74] = {0xFF, std::make_unique<GenericJumpHandler>("JE")};
+  registry[0x75] = {0xFF, std::make_unique<GenericJumpHandler>("JNZ")};
+  registry[0x76] = {0xFF, std::make_unique<GenericJumpHandler>("JBE")};
+  registry[0x77] = {0xFF, std::make_unique<GenericJumpHandler>("JA")};
+  registry[0x78] = {0xFF, std::make_unique<GenericJumpHandler>("JS")};
+  registry[0x79] = {0xFF, std::make_unique<GenericJumpHandler>("JNS")};
+  registry[0x7A] = {0xFF, std::make_unique<GenericJumpHandler>("JP")};
+  registry[0x7B] = {0xFF, std::make_unique<GenericJumpHandler>("JNP")};
+  registry[0x7C] = {0xFF, std::make_unique<GenericJumpHandler>("JL")};
+  registry[0x7D] = {0xFF, std::make_unique<GenericJumpHandler>("JNL")};
+  registry[0x7E] = {0xFF, std::make_unique<GenericJumpHandler>("JLE")};
+  registry[0x7F] = {0xFF, std::make_unique<GenericJumpHandler>("JG")};
 
   return registry;
 }
