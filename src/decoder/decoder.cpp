@@ -215,6 +215,39 @@ static std::vector<InstructionInfo> collectInstructions(
 }
 
 //-----------------------------------------------------------------------------
+std::pair<std::string, uint32_t>
+Decoder::decodeOneInstruction(const std::vector<char> &bytestream,
+                              uint32_t offset) {
+  // Cache the registry - build it once per program
+  static const auto registry = createInstructionRegistry();
+
+  if (offset >= bytestream.size()) {
+    return {"", offset}; // End of bytecode
+  }
+
+  uint8_t opcode = static_cast<uint8_t>(bytestream[offset]);
+
+  // Try to match against registered patterns
+  for (const auto &[pattern, maskAndHandler] : registry) {
+    const auto &[mask, handler] = maskAndHandler;
+    if ((opcode & mask) == pattern) {
+      std::stringstream ss;
+      uint32_t instructionLength = handler->decode(ss, bytestream, offset);
+      std::string decodedOutput = ss.str();
+
+      // Calculate next instruction offset
+      uint32_t nextOffset = offset + instructionLength;
+
+      return {decodedOutput, nextOffset};
+    }
+  }
+
+  throw std::runtime_error(
+      "Error decoding instruction: " + std::to_string(opcode) + " (0b" +
+      std::bitset<8>(opcode).to_string() + ")");
+}
+
+//-----------------------------------------------------------------------------
 std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
   // Cache the registry - build it once per program
   static const auto registry = createInstructionRegistry();

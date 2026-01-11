@@ -1,16 +1,16 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
-#include <string>
-#include <sstream>
 #include <functional>
+#include <sstream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 class Simulator {
- public:
+public:
   // Initialize simulator with bytecode to execute
-  explicit Simulator(const std::vector<char>& bytestream);
+  explicit Simulator(const std::vector<char> &bytestream);
 
   // Execute all instructions in the bytecode
   void run();
@@ -24,12 +24,12 @@ class Simulator {
   // Get execution trace output
   std::string getTrace() const;
 
- private:
+private:
   // Instruction representation
   struct Instruction {
-    std::string mnemonic;  // "mov", "add", "jne", etc.
-    std::string destOp;    // destination operand string
-    std::string srcOp;     // source operand string
+    std::string mnemonic; // "mov", "add", "jne", etc.
+    std::string destOp;   // destination operand string
+    std::string srcOp;    // source operand string
   };
 
   // Decoded instruction representation
@@ -57,45 +57,43 @@ class Simulator {
   std::vector<uint8_t> memory;
 
   // Bytecode to execute
-  const std::vector<char>& bytestream;
+  const std::vector<char> &bytestream;
 
-  // Current instruction pointer
+  // Current instruction pointer (byte offset into bytestream)
   uint32_t instructionPointer = 0;
-
-  // Pre-decoded instructions
-  std::vector<DecodedInstruction> instructions;
-  size_t currentInstructionIndex = 0;
 
   // Trace output stream for execution steps
   std::ostringstream traceOutput;
 
-  // Decode all instructions once during initialization
-  void decodeAllInstructions();
+  // Decode and execute a single instruction at the current instruction pointer
+  // Returns false if at end of bytecode
+  bool decodeAndExecuteStep();
 
   // Parse a decoded instruction string into structured format
   // E.g., "mov AX, BX" -> Instruction{"mov", "AX", "BX"}
-  Instruction parseInstruction(const std::string& decoded);
+  Instruction parseInstruction(const std::string &decoded);
 
   // Execute an instruction
-  void executeInstruction(const Instruction& instr);
+  void executeInstruction(const Instruction &instr);
 
   // Instruction executors
-  void executeMov(const std::string& dest, const std::string& src);
-  void executeAdd(const std::string& dest, const std::string& src);
-  void executeSub(const std::string& dest, const std::string& src);
-  void executeCmp(const std::string& dest, const std::string& src);
-  void executeJump(const std::string& mnemonic);
+  void executeMov(const std::string &dest, const std::string &src);
+  void executeAdd(const std::string &dest, const std::string &src);
+  void executeSub(const std::string &dest, const std::string &src);
+  void executeCmp(const std::string &dest, const std::string &src);
+  void executeJump(const std::string &mnemonic);
 
   // Helper: Perform subtraction with flag updates (shared by SUB and CMP)
-  void performSubtraction(const std::string& dest, const std::string& src, bool storeResult);
+  void performSubtraction(const std::string &dest, const std::string &src,
+                          bool storeResult);
 
   // Helper: Resolve operand value
   // "AX" -> 0x1234, "[BX + SI]" -> memory[bx+si], "5" -> 5, etc.
-  uint16_t resolveOperand(const std::string& operand);
+  uint16_t resolveOperand(const std::string &operand);
 
   // Helper: Set operand value
   // "AX" <- 0x1234, "[BX]" <- 0x5678, etc.
-  void setOperand(const std::string& operand, uint16_t value);
+  void setOperand(const std::string &operand, uint16_t value);
 
   // Helper: Update flags after arithmetic operations
   void setFlags(uint16_t result, bool carry = false, bool overflow = false);
@@ -111,28 +109,28 @@ class Simulator {
   std::string getFlagString() const;
 
   // Helper: Check if a jump condition is met
-  bool shouldJump(const std::string& mnemonic) const;
+  bool shouldJump(const std::string &mnemonic) const;
 
   // Helper: Get register value by name
   // "AX" -> 0x1234, "AL" -> 0x34 (lower byte), "AH" -> 0x12 (upper byte)
-  uint16_t getRegisterValue(const std::string& regName) const;
+  uint16_t getRegisterValue(const std::string &regName) const;
 
   // Helper: Set register value by name
   // "AX" <- 0x1234, "AL" <- 0x34 (preserves upper byte), "AH" <- 0x12
-  void setRegisterValue(const std::string& regName, uint16_t value);
+  void setRegisterValue(const std::string &regName, uint16_t value);
 
   // Helper: Parse immediate value from string
   // "5" -> 5, "-30" -> 0xFFE2 (two's complement), "0x1234" -> 0x1234
-  uint16_t parseImmediate(const std::string& immediate) const;
+  uint16_t parseImmediate(const std::string &immediate) const;
 
   // Helper: Get the name of a register from string
   // "AX" -> ax field address, "BL" -> lower byte of ax, etc.
-  uint16_t& getRegister(const std::string& regName);
+  uint16_t &getRegister(const std::string &regName);
 
   // Helper: Operand type checking
-  bool isRegister(const std::string& operand) const;
-  bool isMemory(const std::string& operand) const;
-  bool isImmediate(const std::string& operand) const;
+  bool isRegister(const std::string &operand) const;
+  bool isMemory(const std::string &operand) const;
+  bool isImmediate(const std::string &operand) const;
 
   // Per-instance register access maps (capture this safely, not static)
   std::unordered_map<std::string, std::function<uint16_t()>> getRegisterMap;

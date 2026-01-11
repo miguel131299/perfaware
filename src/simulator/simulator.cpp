@@ -76,24 +76,36 @@ Simulator::Simulator(const std::vector<char> &bytestream)
          registers.dx = (registers.dx & 0xFF00) | (v & 0xFF);
        }},
   };
-
-  decodeAllInstructions();
 }
 
 void Simulator::run() {
-  // TODO: Continuously step() until we reach end of instructions or hit a halt
-  while (currentInstructionIndex < instructions.size()) {
-    step();
+  // Execute instructions until we reach end of bytecode
+  while (decodeAndExecuteStep()) {
   }
 }
 
-void Simulator::step() {
-  if (currentInstructionIndex >= instructions.size()) {
-    return; // End of program
+void Simulator::step() { decodeAndExecuteStep(); }
+
+bool Simulator::decodeAndExecuteStep() {
+  if (instructionPointer >= bytestream.size()) {
+    return false; // End of program
   }
 
-  const DecodedInstruction &decodedInstr =
-      instructions[currentInstructionIndex];
+  // Decode one instruction at current IP
+  auto [decodedStr, nextIP] =
+      Decoder::decodeOneInstruction(bytestream, instructionPointer);
+
+  if (decodedStr.empty()) {
+    return false; // End of program
+  }
+
+  // Remove trailing newline from decoded string if present
+  if (!decodedStr.empty() && decodedStr.back() == '\n') {
+    decodedStr.pop_back();
+  }
+
+  // Parse decoded instruction
+  Instruction parsed = parseInstruction(decodedStr);
 
   // Capture old register value before execution (for MOV/ADD/SUB operations)
   // CMP doesn't modify registers, so skip tracking for it
@@ -101,9 +113,8 @@ void Simulator::step() {
   bool trackRegister = false;
   std::string regName;
 
-  if (isRegister(decodedInstr.parsed.destOp) &&
-      decodedInstr.parsed.mnemonic != "CMP") {
-    regName = decodedInstr.parsed.destOp;
+  if (isRegister(parsed.destOp) && parsed.mnemonic != "CMP") {
+    regName = parsed.destOp;
     oldValue = getRegisterValue(regName);
     trackRegister = true;
   }
@@ -112,13 +123,13 @@ void Simulator::step() {
   std::string oldFlags = getFlagString();
 
   // Execute instruction
-  executeInstruction(decodedInstr.parsed);
+  executeInstruction(parsed);
 
   // Get new flag state after execution
   std::string newFlags = getFlagString();
 
   // Output trace
-  traceOutput << decodedInstr.decoded;
+  traceOutput << decodedStr;
   if (trackRegister) {
     uint16_t newValue = getRegisterValue(regName);
     traceOutput << " ; " << regName << ":0x" << std::hex << oldValue << "->0x"
@@ -136,37 +147,8 @@ void Simulator::step() {
 
   traceOutput << "\n";
 
-  currentInstructionIndex++;
-}
-
-void Simulator::decodeAllInstructions() {
-  // Decode all instructions at once
-  std::string allDecoded = Decoder::assembleInstructions(bytestream);
-
-  // Parse each line as an instruction
-  std::istringstream iss(allDecoded);
-  std::string line;
-  uint32_t byteOffset = 0;
-
-  while (std::getline(iss, line)) {
-    if (line.empty())
-      continue;
-
-    // Skip non-instruction directives (like "bits 16")
-    if (line.find("bits") != std::string::npos ||
-        line.find("Bits") != std::string::npos)
-      continue;
-
-    // Parse instruction
-    Instruction parsed = parseInstruction(line);
-
-    // Store decoded instruction
-    instructions.push_back(DecodedInstruction{byteOffset, line, parsed});
-
-    // TODO: Calculate actual byte offset from parsing the instruction
-    // For now, assume average instruction length of 3 bytes
-    byteOffset += 3;
-  }
+  instructionPointer = nextIP;
+  return true;
 }
 
 std::string Simulator::dumpState() const {
