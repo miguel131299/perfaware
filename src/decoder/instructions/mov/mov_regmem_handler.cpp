@@ -3,7 +3,6 @@
 #include "instructions/utilities/bit_utilities.hpp"
 #include "operand_decoder.hpp"
 #include "tables/registers.hpp"
-#include "mov_utilities.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <string>
