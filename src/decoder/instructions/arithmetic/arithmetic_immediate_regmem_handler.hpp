@@ -16,7 +16,7 @@ public:
   ArithmeticImmediateRegMemHandler(std::string_view mnemonic, uint8_t expectedRegField, OutputFunction outputFunc)
       : mnemonic_(mnemonic), expectedRegField_(expectedRegField), outputFunc_(outputFunc) {}
 
-  uint32_t decode(std::stringstream &ss, const std::vector<char> &bytestream,
+  uint32_t decode(std::stringstream &ss, const std::vector<uint8_t> &bytes,
                   uint32_t baseOffset) override;
 
   [[nodiscard]] std::string_view getName() const override { return mnemonic_; }
@@ -24,7 +24,7 @@ public:
 private:
   uint32_t handleAddressingMode(std::stringstream &ss, MODEncoding mod,
                                 uint8_t rmBits,
-                                const std::vector<char> &bytestream,
+                                const std::vector<uint8_t> &bytes,
                                 uint32_t baseOffset, bool isWordOperation,
                                 bool isSignExtended);
 

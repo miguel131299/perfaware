@@ -10,7 +10,7 @@
 //-----------------------------------------------------------------------------
 uint32_t MOVRegMemHandler::handleAddressingMode(
     std::stringstream &ss, MODEncoding mod, uint8_t rmBits,
-    const std::vector<char> &bytestream, uint32_t baseOffset, uint8_t regCode,
+    const std::vector<uint8_t> &bytes, uint32_t baseOffset, uint8_t regCode,
     bool isWordOperation, bool isDestReg) {
   std::string regOperand =
       std::string(getRegisterName(regCode, isWordOperation));
@@ -30,12 +30,12 @@ uint32_t MOVRegMemHandler::handleAddressingMode(
 
   case MODEncoding::MEMORY_MODE_NO_DISPLACEMENT: {
     Operand memOperand = OperandDecoder::decodeEffectiveAddress(
-        rmBits, bytestream, baseOffset, false);
+        rmBits, bytes, baseOffset, false);
 
     // Check for direct address mode (RM=6 with MOD=00)
     if (rmBits == 6) {
       // Direct address - read 2 more bytes
-      int16_t address = readInt16(bytestream, baseOffset + 2);
+      int16_t address = readInt16(bytes, baseOffset + 2);
       memOperand.value = "[" + std::to_string(address) + "]";
 
       if (isDestReg) {
@@ -55,7 +55,7 @@ uint32_t MOVRegMemHandler::handleAddressingMode(
   }
 
   case MODEncoding::MEMORY_MODE_8_DISPLACEMENT: {
-    int8_t displacement = static_cast<int8_t>(bytestream[baseOffset + 2]);
+    int8_t displacement = static_cast<int8_t>(bytes[baseOffset + 2]);
     std::string baseAddress = getBaseRegisterAddress(rmBits);
     std::string memOperand = formatDisplacement(baseAddress, displacement);
 
@@ -68,7 +68,7 @@ uint32_t MOVRegMemHandler::handleAddressingMode(
   }
 
   case MODEncoding::MEMORY_MODE_16_DISPLACEMENT: {
-    int16_t displacement = readInt16(bytestream, baseOffset + 2);
+    int16_t displacement = readInt16(bytes, baseOffset + 2);
 
     std::string baseAddress = getBaseRegisterAddress(rmBits);
     std::string memOperand = formatDisplacement(baseAddress, displacement);
@@ -87,19 +87,19 @@ uint32_t MOVRegMemHandler::handleAddressingMode(
 
 //-----------------------------------------------------------------------------
 uint32_t MOVRegMemHandler::decode(std::stringstream &ss,
-                                  const std::vector<char> &bytestream,
+                                  const std::vector<uint8_t> &bytes,
                                   uint32_t baseOffset) {
   // Word/Byte Operation
-  bool isWordOperation = isBitSet(bytestream[baseOffset], BIT_POS_W);
+  bool isWordOperation = isBitSet(bytes[baseOffset], BIT_POS_W);
 
   // Direction: D=0 -> REG is source, D=1 -> REG is destination
-  bool isRegDest = isBitSet(bytestream[baseOffset], BIT_POS_D);
+  bool isRegDest = isBitSet(bytes[baseOffset], BIT_POS_D);
 
-  uint8_t secondByte = static_cast<uint8_t>(bytestream[baseOffset + 1]);
+  uint8_t secondByte = static_cast<uint8_t>(bytes[baseOffset + 1]);
   MODEncoding mod = getMODEncoding(secondByte);
   uint8_t regCode = (secondByte & BIT_FIELD_REG_MASK) >> 3;
   uint8_t rmCode = secondByte & BIT_FIELD_RM_MASK;
 
-  return handleAddressingMode(ss, mod, rmCode, bytestream, baseOffset, regCode,
+  return handleAddressingMode(ss, mod, rmCode, bytes, baseOffset, regCode,
                               isWordOperation, isRegDest);
 }

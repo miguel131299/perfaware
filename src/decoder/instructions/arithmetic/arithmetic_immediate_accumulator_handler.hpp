@@ -14,7 +14,7 @@ public:
   ArithmeticImmediateAccumulatorHandler(std::string_view mnemonic, OutputFunction outputFunc)
       : mnemonic_(mnemonic), outputFunc_(outputFunc) {}
 
-  uint32_t decode(std::stringstream &ss, const std::vector<char> &bytestream,
+  uint32_t decode(std::stringstream &ss, const std::vector<uint8_t> &bytes,
                   uint32_t baseOffset) override;
 
   [[nodiscard]] std::string_view getName() const override { return mnemonic_; }

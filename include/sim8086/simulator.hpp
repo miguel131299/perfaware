@@ -58,8 +58,8 @@ private:
   // Memory (64KB for 8086)
   std::vector<uint8_t> memory;
 
-  // Bytecode to execute
-  const std::vector<char> &bytestream;
+  // Size of loaded bytecode
+  uint32_t bytecodeSize = 0;
 
   // Whether to track IP register changes in trace output
   bool trackIPRegister = false;

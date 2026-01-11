@@ -14,7 +14,7 @@ public:
   // Decode and output the instruction
   // Returns the number of bytes consumed
   virtual uint32_t decode(std::stringstream &ss,
-                          const std::vector<char> &bytestream,
+                          const std::vector<uint8_t> &bytes,
                           uint32_t baseOffset) = 0;
 
   // Get the name of this instruction

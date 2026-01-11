@@ -8,7 +8,7 @@
 
 //-----------------------------------------------------------------------------
 uint32_t MOVMemAccumulatorHandler::decode(std::stringstream &ss,
-                                          const std::vector<char> &bytestream,
+                                          const std::vector<uint8_t> &bytes,
                                           uint32_t baseOffset) {
   // Opcode patterns:
   //   0xA0 (0b10100000): MOV AL, moffs8
@@ -17,10 +17,10 @@ uint32_t MOVMemAccumulatorHandler::decode(std::stringstream &ss,
   // Byte format: [opcode][low address byte][high address byte]
   // W bit is encoded in the opcode (bit 0)
 
-  bool isWordOperation = isBitSet(bytestream[baseOffset], BIT_POS_W);
+  bool isWordOperation = isBitSet(bytes[baseOffset], BIT_POS_W);
   
   // Read the direct address (2 bytes, little-endian)
-  int16_t address = readInt16(bytestream, baseOffset + 1);
+  int16_t address = readInt16(bytes, baseOffset + 1);
   
   std::string memOperand = "[" + std::to_string(address) + "]";
   std::string regOperand = std::string(getRegisterName(0, isWordOperation)); // 0 = AX/AL

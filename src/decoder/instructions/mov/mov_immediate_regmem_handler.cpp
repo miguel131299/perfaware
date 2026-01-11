@@ -11,7 +11,7 @@
 
 uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
     std::stringstream &ss, MODEncoding mod, uint8_t rmBits,
-    const std::vector<char> &bytestream, uint32_t baseOffset,
+    const std::vector<uint8_t> &bytes, uint32_t baseOffset,
     bool isWordOperation) {
 
   switch (mod) {
@@ -19,23 +19,23 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
     // In this case, regCode is always 0 -> AX/AL
     std::string regOperand = std::string(getRegisterName(0, isWordOperation));
     Operand immediate = OperandDecoder::decodeImmediate(
-        bytestream, baseOffset + 2, isWordOperation);
+        bytes, baseOffset + 2, isWordOperation);
     outputMOVInstruction(ss, regOperand, immediate.value);
     return 2;
   }
 
   case MODEncoding::MEMORY_MODE_NO_DISPLACEMENT: {
     Operand memOperand = OperandDecoder::decodeEffectiveAddress(
-        rmBits, bytestream, baseOffset, false);
+        rmBits, bytes, baseOffset, false);
 
     // Check for direct address mode (RM=6 with MOD=00)
     if (rmBits == 6) {
       // Direct address - read 2 more bytes
-      int16_t address = readInt16(bytestream, baseOffset + 2);
+      int16_t address = readInt16(bytes, baseOffset + 2);
       memOperand.value = "[" + std::to_string(address) + "]";
 
       Operand immediate = OperandDecoder::decodeImmediate(
-          bytestream, baseOffset + 4, isWordOperation);
+          bytes, baseOffset + 4, isWordOperation);
 
       outputMOVInstruction(
           ss, addExplicitSizeToMemory(memOperand.value, isWordOperation),
@@ -45,7 +45,7 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
     }
 
     Operand immediate = OperandDecoder::decodeImmediate(
-        bytestream, baseOffset + 2, isWordOperation);
+        bytes, baseOffset + 2, isWordOperation);
 
     outputMOVInstruction(
         ss, addExplicitSizeToMemory(memOperand.value, isWordOperation),
@@ -55,12 +55,12 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
   }
 
   case MODEncoding::MEMORY_MODE_8_DISPLACEMENT: {
-    int8_t displacement = static_cast<int8_t>(bytestream[baseOffset + 2]);
+    int8_t displacement = static_cast<int8_t>(bytes[baseOffset + 2]);
     std::string baseAddress = getBaseRegisterAddress(rmBits);
     std::string memOperand = formatDisplacement(baseAddress, displacement);
 
     Operand immediate = OperandDecoder::decodeImmediate(
-        bytestream, baseOffset + (isWordOperation ? 4 : 3), isWordOperation);
+        bytes, baseOffset + (isWordOperation ? 4 : 3), isWordOperation);
 
     outputMOVInstruction(ss,
                          addExplicitSizeToMemory(memOperand, isWordOperation),
@@ -70,13 +70,13 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
   }
 
   case MODEncoding::MEMORY_MODE_16_DISPLACEMENT: {
-    int16_t displacement = readInt16(bytestream, baseOffset + 2);
+    int16_t displacement = readInt16(bytes, baseOffset + 2);
 
     std::string baseAddress = getBaseRegisterAddress(rmBits);
     std::string memOperand = formatDisplacement(baseAddress, displacement);
 
     Operand immediate = OperandDecoder::decodeImmediate(
-        bytestream, baseOffset + (isWordOperation ? 4 : 3), isWordOperation);
+        bytes, baseOffset + (isWordOperation ? 4 : 3), isWordOperation);
 
     outputMOVInstruction(ss,
                          addExplicitSizeToMemory(memOperand, isWordOperation),
@@ -90,7 +90,7 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
 
 //-----------------------------------------------------------------------------
 uint32_t MOVImmediateRegMemHandler::decode(std::stringstream &ss,
-                                           const std::vector<char> &bytestream,
+                                           const std::vector<uint8_t> &bytes,
                                            uint32_t baseOffset) {
   // Opcode patterns:
   //   0xC6 (0b11000110) mask 0b11111110: MOV immediate to reg/mem (byte)
@@ -102,10 +102,10 @@ uint32_t MOVImmediateRegMemHandler::decode(std::stringstream &ss,
   // Steps:
   // 1. Extract W bit from opcode to determine word (1) or byte (0) operation
   // Word/Byte Operation
-  bool isWordOperation = isBitSet(bytestream[baseOffset], BIT_POS_W);
+  bool isWordOperation = isBitSet(bytes[baseOffset], BIT_POS_W);
 
   // 2. Extract MOD, REG, and R/M from second byte
-  uint8_t secondByte = static_cast<uint8_t>(bytestream[baseOffset + 1]);
+  uint8_t secondByte = static_cast<uint8_t>(bytes[baseOffset + 1]);
   MODEncoding mod = getMODEncoding(secondByte);
   uint8_t regCode = (secondByte & BIT_FIELD_REG_MASK) >> 3;
   uint8_t rmCode = secondByte & BIT_FIELD_RM_MASK;
@@ -122,6 +122,6 @@ uint32_t MOVImmediateRegMemHandler::decode(std::stringstream &ss,
   // 5. Decode the immediate value
   // 6. Output the instruction
   // 7. Return bytes consumed
-  return handleAddressingMode(ss, mod, rmCode, bytestream, baseOffset,
+  return handleAddressingMode(ss, mod, rmCode, bytes, baseOffset,
                               isWordOperation);
 }

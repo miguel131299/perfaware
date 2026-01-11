@@ -20,15 +20,15 @@ Operand OperandDecoder::decodeRegister(uint8_t byte, bool getReg,
 }
 
 //-----------------------------------------------------------------------------
-Operand OperandDecoder::decodeImmediate(const std::vector<char> &bytestream,
+Operand OperandDecoder::decodeImmediate(const std::vector<uint8_t> &bytes,
                                         uint32_t offset, bool is16Bit) {
   std::string value;
 
   if (is16Bit) {
-    int16_t immediateValue = readInt16(bytestream, offset);
+    int16_t immediateValue = readInt16(bytes, offset);
     value = std::to_string(immediateValue);
   } else {
-    int8_t immediateValue = static_cast<int8_t>(bytestream[offset]);
+    int8_t immediateValue = static_cast<int8_t>(bytes[offset]);
     value = std::to_string(immediateValue);
   }
 
@@ -61,13 +61,13 @@ static const char *getEffectiveAddressBase(uint8_t RM) {
 
 Operand
 OperandDecoder::decodeEffectiveAddress(uint8_t RM,
-                                       const std::vector<char> &bytestream,
+                                       const std::vector<uint8_t> &bytes,
                                        uint32_t base, bool isWithDisplacement) {
   std::string result = getEffectiveAddressBase(RM);
 
   // Add displacement if present
   if (isWithDisplacement) {
-    int16_t displacement = readInt16(bytestream, base + 2);
+    int16_t displacement = readInt16(bytes, base + 2);
 
     if (displacement != 0) {
       result += " + " + std::to_string(displacement);

@@ -22,11 +22,11 @@ public:
                                 bool isWordOperation);
 
   // Decode immediate value (8-bit or 16-bit signed)
-  static Operand decodeImmediate(const std::vector<char> &bytestream,
+  static Operand decodeImmediate(const std::vector<uint8_t> &bytes,
                                  uint32_t offset, bool is16Bit);
 
   // Decode effective address with base registers
   static Operand decodeEffectiveAddress(uint8_t RM,
-                                        const std::vector<char> &bytestream,
+                                        const std::vector<uint8_t> &bytes,
                                         uint32_t base, bool isWithDisplacement);
 };

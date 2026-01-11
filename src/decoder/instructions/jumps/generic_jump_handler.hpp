@@ -12,7 +12,7 @@ public:
   GenericJumpHandler(std::string_view mnemonic)
       : mnemonic_(mnemonic) {}
 
-  uint32_t decode(std::stringstream &ss, const std::vector<char> &bytestream,
+  uint32_t decode(std::stringstream &ss, const std::vector<uint8_t> &bytes,
                   uint32_t baseOffset) override;
 
   [[nodiscard]] std::string_view getName() const override { return mnemonic_; }

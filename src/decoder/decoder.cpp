@@ -150,17 +150,17 @@ struct InstructionInfo {
 
 // First pass: Decode instructions and collect jump target addresses
 static std::vector<InstructionInfo> collectInstructions(
-    const std::vector<char> &bytestream,
+    const std::vector<uint8_t> &bytes,
     const std::map<uint8_t,
                    std::pair<uint8_t, std::unique_ptr<InstructionHandler>>>
         &registry) {
   std::vector<InstructionInfo> instructions;
-  instructions.reserve(bytestream.size() /
+  instructions.reserve(bytes.size() /
                        2); // Most instructions are 1-2 bytes
 
   uint32_t i = 0;
-  while (i < bytestream.size()) {
-    uint8_t opcode = static_cast<uint8_t>(bytestream[i]);
+  while (i < bytes.size()) {
+    uint8_t opcode = bytes[i];
     bool found = false;
 
     // Try to match against registered patterns
@@ -173,7 +173,7 @@ static std::vector<InstructionInfo> collectInstructions(
 
         // Decode instruction and capture output
         std::stringstream decodedSs;
-        i += handler->decode(decodedSs, bytestream, i);
+        i += handler->decode(decodedSs, bytes, i);
         uint32_t instructionLength = i - byteOffsetBefore;
 
         // Check if this is a jump instruction (opcodes 0x70-0x7F, 0xE0-0xE3)
@@ -186,7 +186,7 @@ static std::vector<InstructionInfo> collectInstructions(
         // If jump, calculate target
         if (isJump) {
           int8_t displacement =
-              static_cast<int8_t>(bytestream[byteOffsetBefore + 1]);
+              static_cast<int8_t>(bytes[byteOffsetBefore + 1]);
           int32_t target =
               static_cast<int32_t>(byteOffsetBefore + 2 + displacement);
           info.jumpTarget = target;
@@ -210,23 +210,23 @@ static std::vector<InstructionInfo> collectInstructions(
 
 //-----------------------------------------------------------------------------
 std::pair<std::string, uint32_t>
-Decoder::decodeOneInstruction(const std::vector<char> &bytestream,
+Decoder::decodeOneInstruction(const std::vector<uint8_t> &bytes,
                               uint32_t offset) {
   // Cache the registry - build it once per program
   static const auto registry = createInstructionRegistry();
 
-  if (offset >= bytestream.size()) {
+  if (offset >= bytes.size()) {
     return {"", offset}; // End of bytecode
   }
 
-  uint8_t opcode = static_cast<uint8_t>(bytestream[offset]);
+  uint8_t opcode = bytes[offset];
 
   // Try to match against registered patterns
   for (const auto &[pattern, maskAndHandler] : registry) {
     const auto &[mask, handler] = maskAndHandler;
     if ((opcode & mask) == pattern) {
       std::stringstream ss;
-      uint32_t instructionLength = handler->decode(ss, bytestream, offset);
+      uint32_t instructionLength = handler->decode(ss, bytes, offset);
       std::string decodedOutput = ss.str();
 
       // Calculate next instruction offset
@@ -243,11 +243,14 @@ Decoder::decodeOneInstruction(const std::vector<char> &bytestream,
 
 //-----------------------------------------------------------------------------
 std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
+  // Convert to uint8_t vector for internal use
+  std::vector<uint8_t> bytes(bytestream.begin(), bytestream.end());
+  
   // Cache the registry - build it once per program
   static const auto registry = createInstructionRegistry();
 
   // First pass: Collect all instructions and jump targets
-  auto instructions = collectInstructions(bytestream, registry);
+  auto instructions = collectInstructions(bytes, registry);
 
   // Build a set of all jump targets
   std::set<uint32_t> jumpTargets;
@@ -282,7 +285,7 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
     }
 
     // Decode and output the instruction
-    uint8_t opcode = static_cast<uint8_t>(bytestream[instr.byteOffset]);
+    uint8_t opcode = bytes[instr.byteOffset];
 
     // Find the handler for this instruction
     for (const auto &[pattern, maskAndHandler] : registry) {
@@ -310,7 +313,7 @@ std::string Decoder::assembleInstructions(const std::vector<char> &bytestream) {
           }
 
           int8_t displacement =
-              static_cast<int8_t>(bytestream[instr.byteOffset + 1]);
+              static_cast<int8_t>(bytes[instr.byteOffset + 1]);
           int32_t target =
               static_cast<int32_t>(instr.byteOffset + 2 + displacement);
 

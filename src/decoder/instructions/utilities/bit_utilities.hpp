@@ -26,10 +26,10 @@ inline uint8_t extractBits(uint8_t byte, uint8_t mask, std::size_t shift = 0) {
   return (byte & mask) >> shift;
 }
 
-// Read two bytes from bytestream at given offset and combine into 16-bit signed
+// Read two bytes from bytes at given offset and combine into 16-bit signed
 // integer
-inline int16_t readInt16(const std::vector<char> &bytestream, uint32_t offset) {
-  uint8_t lowByte = static_cast<uint8_t>(bytestream[offset]);
-  uint8_t highByte = static_cast<uint8_t>(bytestream[offset + 1]);
+inline int16_t readInt16(const std::vector<uint8_t> &bytes, uint32_t offset) {
+  uint8_t lowByte = bytes[offset];
+  uint8_t highByte = bytes[offset + 1];
   return lowByte | (static_cast<int16_t>(highByte) << 8);
 }

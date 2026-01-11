@@ -12,8 +12,13 @@
 #include <unordered_map>
 
 Simulator::Simulator(const std::vector<char> &bytestream, bool trackIPRegister)
-    : memory(65536, 0), bytestream(bytestream),
+    : memory(65536, 0), bytecodeSize(bytestream.size()),
       trackIPRegister(trackIPRegister) {
+  // Load bytecode into memory starting at address 0
+  for (size_t i = 0; i < bytestream.size(); i++) {
+    memory[i] = static_cast<uint8_t>(bytestream[i]);
+  }
+  
   // Initialize register getter map - each instance has its own capturing this
   getRegisterMap = {
       {"AX", [this]() { return registers.ax; }},
@@ -88,16 +93,17 @@ void Simulator::run() {
 void Simulator::step() { decodeAndExecuteStep(); }
 
 bool Simulator::decodeAndExecuteStep() {
-  if (registers.ip >= bytestream.size()) {
+  // Check if IP has gone past the loaded bytecode
+  if (registers.ip >= bytecodeSize) {
     return false; // End of program
   }
 
   // Capture old IP before execution
   uint32_t oldIP = registers.ip;
 
-  // Decode one instruction at current IP
+  // Decode one instruction at current IP from memory
   auto [decodedStr, nextIP] =
-      Decoder::decodeOneInstruction(bytestream, registers.ip);
+      Decoder::decodeOneInstruction(memory, registers.ip);
 
   if (decodedStr.empty()) {
     return false; // End of program
@@ -457,10 +463,10 @@ void Simulator::setFlags(uint16_t result, bool carry, bool overflow) {
 }
 
 int8_t Simulator::readDisplacement(uint32_t offset) {
-  if (offset + 1 >= bytestream.size()) {
+  if (offset + 1 >= bytecodeSize) {
     throw std::runtime_error("Cannot read displacement: out of bounds");
   }
-  return static_cast<int8_t>(bytestream[offset + 1]);
+  return static_cast<int8_t>(memory[offset + 1]);
 }
 
 uint32_t Simulator::calculateJumpTarget(uint32_t currentIP,
@@ -470,7 +476,7 @@ uint32_t Simulator::calculateJumpTarget(uint32_t currentIP,
       static_cast<int32_t>(currentIP) + 2 + static_cast<int32_t>(displacement);
 
   // Ensure target stays within bytecode bounds
-  if (target < 0 || target > static_cast<int32_t>(bytestream.size())) {
+  if (target < 0 || target > static_cast<int32_t>(bytecodeSize)) {
     throw std::runtime_error("Jump target out of bounds");
   }
 

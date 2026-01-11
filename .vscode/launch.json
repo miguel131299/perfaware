@@ -16,6 +16,15 @@
     {
       "type": "lldb",
       "request": "launch",
+      "name": "Debug Last Simulator Test",
+      "program": "${workspaceFolder}/build/tests/sim8086_tests",
+      "args": ["--gtest_filter=SimulatorExecution/SimulatorTest.ExecutionOutput/7"],
+      "cwd": "${workspaceFolder}/build",
+      "env": { "TEST_DATA_DIR": "../listings" }
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
       "name": "Debug sim8086",
       "program": "${workspaceFolder}/build/sim8086",
       "args": ["./listings/listing_0041_add_sub_cmp_jnz"],

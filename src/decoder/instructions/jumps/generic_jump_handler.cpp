@@ -6,13 +6,13 @@
 
 //-----------------------------------------------------------------------------
 uint32_t GenericJumpHandler::decode(std::stringstream &ss,
-                                    const std::vector<char> &bytestream,
+                                    const std::vector<uint8_t> &bytes,
                                     uint32_t baseOffset) {
   // Jump instructions with 8-bit signed displacement
   // Format: [opcode][displacement]
   // Target address = baseOffset + 2 + sign_extended(displacement)
 
-  int8_t displacement = static_cast<int8_t>(bytestream[baseOffset + 1]);
+  int8_t displacement = static_cast<int8_t>(bytes[baseOffset + 1]);
 
   // Calculate target address (relative to next instruction)
   int32_t targetOffset = static_cast<int32_t>(baseOffset) + 2 + displacement;

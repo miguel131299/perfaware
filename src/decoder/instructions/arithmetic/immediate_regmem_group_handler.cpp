@@ -9,10 +9,10 @@
 //-----------------------------------------------------------------------------
 uint32_t
 ImmediateRegMemGroupHandler::decode(std::stringstream &ss,
-                                    const std::vector<char> &bytestream,
+                                    const std::vector<uint8_t> &bytes,
                                     uint32_t baseOffset) {
   // The 0x80-0x83 group uses the REG field to distinguish instructions
-  uint8_t secondByte = static_cast<uint8_t>(bytestream[baseOffset + 1]);
+  uint8_t secondByte = static_cast<uint8_t>(bytes[baseOffset + 1]);
   uint8_t regCode = (secondByte & BIT_FIELD_REG_MASK) >> 3;
 
   switch (regCode) {
@@ -24,7 +24,7 @@ ImmediateRegMemGroupHandler::decode(std::stringstream &ss,
     };
     ArithmeticImmediateRegMemHandler handler("ADD (imm to reg/mem)", 0,
                                              addOutput);
-    return handler.decode(ss, bytestream, baseOffset);
+    return handler.decode(ss, bytes, baseOffset);
   }
   case 5: {
     // SUB immediate to reg/mem
@@ -34,7 +34,7 @@ ImmediateRegMemGroupHandler::decode(std::stringstream &ss,
     };
     ArithmeticImmediateRegMemHandler handler("SUB (imm to reg/mem)", 5,
                                              subOutput);
-    return handler.decode(ss, bytestream, baseOffset);
+    return handler.decode(ss, bytes, baseOffset);
   }
   case 7: {
     // CMP immediate to reg/mem
@@ -44,7 +44,7 @@ ImmediateRegMemGroupHandler::decode(std::stringstream &ss,
     };
     ArithmeticImmediateRegMemHandler handler("CMP (imm to reg/mem)", 7,
                                              cmpOutput);
-    return handler.decode(ss, bytestream, baseOffset);
+    return handler.decode(ss, bytes, baseOffset);
   }
   default:
     throw std::runtime_error(

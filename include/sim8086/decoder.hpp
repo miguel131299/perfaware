@@ -14,5 +14,5 @@ public:
   // Decode a single instruction at the given offset
   // Returns a pair of (decoded instruction string, next byte offset)
   static std::pair<std::string, uint32_t>
-  decodeOneInstruction(const std::vector<char> &bytestream, uint32_t offset);
+  decodeOneInstruction(const std::vector<uint8_t> &bytes, uint32_t offset);
 };
