@@ -143,6 +143,10 @@ private:
   bool isMemory(const std::string &operand) const;
   bool isImmediate(const std::string &operand) const;
 
+  // Helper: Parse memory address from operand string
+  // "[5]" -> 5, "[BX]" -> registers.bx, "[BX + 4]" -> registers.bx + 4, etc.
+  uint16_t parseMemoryAddress(const std::string &operand) const;
+
   // Per-instance register access maps (capture this safely, not static)
   std::unordered_map<std::string, std::function<uint16_t()>> getRegisterMap;
   std::unordered_map<std::string, std::function<void(uint16_t)>> setRegisterMap;

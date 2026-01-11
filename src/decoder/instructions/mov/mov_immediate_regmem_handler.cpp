@@ -1,18 +1,13 @@
 #include "mov_immediate_regmem_handler.hpp"
 
 #include "instructions/utilities/bit_utilities.hpp"
-#include "operand_decoder.hpp"
-#include "tables/registers.hpp"
 #include "mov_regmem_handler.hpp"
 #include "mov_utilities.hpp"
+#include "operand_decoder.hpp"
+#include "tables/registers.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <string>
-
-static std::string addExplicitSizeToImmediate(std::string &immediate,
-                                              bool isWordOperation) {
-  return std::string(isWordOperation ? "word" : "byte") + " " + immediate;
-}
 
 uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
     std::stringstream &ss, MODEncoding mod, uint8_t rmBits,
@@ -42,7 +37,9 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
       Operand immediate = OperandDecoder::decodeImmediate(
           bytestream, baseOffset + 4, isWordOperation);
 
-      outputMOVInstruction(ss, memOperand.value, immediate.value);
+      outputMOVInstruction(
+          ss, addExplicitSizeToMemory(memOperand.value, isWordOperation),
+          immediate.value);
 
       return isWordOperation ? 6 : 5;
     }
@@ -51,8 +48,8 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
         bytestream, baseOffset + 2, isWordOperation);
 
     outputMOVInstruction(
-        ss, memOperand.value,
-        addExplicitSizeToImmediate(immediate.value, isWordOperation));
+        ss, addExplicitSizeToMemory(memOperand.value, isWordOperation),
+        immediate.value);
 
     return isWordOperation ? 4 : 3;
   }
@@ -65,9 +62,9 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
     Operand immediate = OperandDecoder::decodeImmediate(
         bytestream, baseOffset + (isWordOperation ? 4 : 3), isWordOperation);
 
-    outputMOVInstruction(
-        ss, memOperand,
-        addExplicitSizeToImmediate(immediate.value, isWordOperation));
+    outputMOVInstruction(ss,
+                         addExplicitSizeToMemory(memOperand, isWordOperation),
+                         immediate.value);
 
     return isWordOperation ? 5 : 4;
   }
@@ -81,9 +78,9 @@ uint32_t MOVImmediateRegMemHandler::handleAddressingMode(
     Operand immediate = OperandDecoder::decodeImmediate(
         bytestream, baseOffset + (isWordOperation ? 4 : 3), isWordOperation);
 
-    outputMOVInstruction(
-        ss, memOperand,
-        addExplicitSizeToImmediate(immediate.value, isWordOperation));
+    outputMOVInstruction(ss,
+                         addExplicitSizeToMemory(memOperand, isWordOperation),
+                         immediate.value);
     return isWordOperation ? 6 : 5;
   }
   }

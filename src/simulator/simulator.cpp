@@ -127,8 +127,7 @@ bool Simulator::decodeAndExecuteStep() {
   std::string oldFlags = getFlagString();
 
   // Execute instruction and get next IP
-  uint32_t actualNextIP =
-      executeInstruction(parsed, registers.ip, nextIP);
+  uint32_t actualNextIP = executeInstruction(parsed, registers.ip, nextIP);
   registers.ip = actualNextIP;
 
   // Get new flag state after execution
@@ -282,7 +281,7 @@ Simulator::Instruction Simulator::parseInstruction(const std::string &decoded) {
 }
 
 uint32_t Simulator::executeInstruction(const Instruction &instr,
-                                        uint32_t currentIP, uint32_t nextIP) {
+                                       uint32_t currentIP, uint32_t nextIP) {
   // TODO: Dispatch to appropriate executor based on mnemonic
   if (instr.mnemonic == "MOV") {
     executeMov(instr.destOp, instr.srcOp);
@@ -380,7 +379,7 @@ uint32_t Simulator::executeJump(const std::string &mnemonic, uint32_t currentIP,
     int8_t displacement = readDisplacement(currentIP);
     return calculateJumpTarget(currentIP, displacement);
   }
-  return nextIP;  // No jump condition met, return normal next instruction
+  return nextIP; // No jump condition met, return normal next instruction
 }
 
 void Simulator::performSubtraction(const std::string &dest,
@@ -416,47 +415,34 @@ void Simulator::performSubtraction(const std::string &dest,
 }
 
 uint16_t Simulator::resolveOperand(const std::string &operand) {
-  // TODO: Convert operand string to actual value
-  // Cases:
-  // - Register: "AX" -> registers.ax
-  // - Memory direct: "[5]" -> memory[5]
-  // - Memory reg: "[BX]" -> memory[registers.bx]
-  // - Memory reg+reg: "[BX + SI]" -> memory[registers.bx + registers.si]
-  // - Memory reg+offset: "[BP + 4]" -> memory[registers.bp + 4]
-  // - Immediate: "5", "-30", "0x1234" -> parse as number
-  // - Register halves: "AL", "AH", "BL", etc.
-
-  // if (operand[0] == '[' && operand[operand.length()-1] == ']') {
-  //   return memory[]
-  // }
   if (isRegister(operand)) {
     return getRegisterValue(operand);
-  }
-  // else if (isMemory(operand)) {
-  //   uint16_t addr = parseMemoryAddress(operand);
-  // }
-  else {
+  } else if (isMemory(operand)) {
+    uint16_t addr = parseMemoryAddress(operand);
+    // Read 16-bit word from memory (little-endian)
+    uint16_t value =
+        static_cast<uint16_t>(memory[addr]) |
+        (static_cast<uint16_t>(memory[(addr + 1) % memory.size()]) << 8);
+    return value;
+  } else {
     return parseImmediate(operand);
   }
-
-  throw std::runtime_error("resolveOperand() not implemented");
 }
 
 void Simulator::setOperand(const std::string &operand, uint16_t value) {
-  // - "AX" -> registers.ax = value
-  // - "[BX]" -> memory[registers.bx] = value (handle byte/word)
-  // - "AL" -> lower byte of AX
-  // - "AH" -> upper byte of AX
   if (isRegister(operand)) {
     setRegisterValue(operand, value);
     return;
+  } else if (isMemory(operand)) {
+    uint16_t addr = parseMemoryAddress(operand);
+    // Write 16-bit word to memory (little-endian)
+    memory[addr] = static_cast<uint8_t>(value & 0xFF);
+    memory[(addr + 1) % memory.size()] =
+        static_cast<uint8_t>((value >> 8) & 0xFF);
+    return;
   }
-  // else if (isMemory(operand)) {
-  //   uint16_t addr = parseMemoryAddress(operand);
-  //   memory[addr] = value;
-  // }
 
-  throw std::runtime_error("setOperand() not fully implemented");
+  throw std::runtime_error("setOperand() encountered unknown operand type");
 }
 
 void Simulator::setFlags(uint16_t result, bool carry, bool overflow) {
@@ -586,9 +572,112 @@ bool Simulator::isRegister(const std::string &operand) const {
 }
 
 bool Simulator::isMemory(const std::string &operand) const {
-  return !operand.empty() && operand.front() == '[' && operand.back() == ']';
+  // Check for memory operand like "[5]" or with size prefix like "WORD [5]"
+  std::string trimmed = operand;
+
+  // Skip size prefix if present (e.g., "WORD [...]", "word [...]", "BYTE
+  // [...]", "byte [...]")
+  if (trimmed.size() >= 5) {
+    std::string prefix = trimmed.substr(0, 5);
+    // Convert to uppercase for comparison
+    std::transform(prefix.begin(), prefix.end(), prefix.begin(), ::toupper);
+    if (prefix == "WORD " || prefix == "BYTE ") {
+      trimmed = trimmed.substr(5);
+    }
+  }
+
+  return !trimmed.empty() && trimmed.front() == '[' && trimmed.back() == ']';
 }
 
 bool Simulator::isImmediate(const std::string &operand) const {
   return !isRegister(operand) && !isMemory(operand);
+}
+
+uint16_t Simulator::parseMemoryAddress(const std::string &operand) const {
+  // Parse memory operand like "[5]", "[BX]", "[BX + SI]", "[BP - 4]"
+  // or with size prefix like "word [5]", "byte [BP + 4]"
+
+  std::string trimmed = operand;
+
+  // Skip size prefix if present (uppercase or lowercase)
+  if (trimmed.size() >= 5) {
+    std::string prefix = trimmed.substr(0, 5);
+    // Convert to uppercase for comparison
+    std::transform(prefix.begin(), prefix.end(), prefix.begin(), ::toupper);
+    if (prefix == "WORD " || prefix == "BYTE ") {
+      trimmed = trimmed.substr(5);
+    }
+  }
+
+  if (trimmed.empty() || trimmed.front() != '[' || trimmed.back() != ']') {
+    throw std::runtime_error("Invalid memory operand: " + operand);
+  }
+
+  // Strip brackets
+  std::string content = trimmed.substr(1, trimmed.length() - 2);
+
+  // Trim whitespace
+  auto trim = [](std::string s) {
+    s.erase(0, s.find_first_not_of(" \t\r\n"));
+    s.erase(s.find_last_not_of(" \t\r\n") + 1);
+    return s;
+  };
+  content = trim(content);
+
+  // Check for +/- operators
+  size_t plusPos = content.find('+');
+  size_t minusPos = content.find('-');
+
+  // Find the rightmost +/- (to handle cases like "BX - 4")
+  size_t opPos = std::string::npos;
+  char opChar = ' ';
+  if (plusPos != std::string::npos) {
+    opPos = plusPos;
+    opChar = '+';
+  }
+  if (minusPos != std::string::npos && minusPos > 0) {
+    // Make sure it's not a leading minus
+    if (opPos == std::string::npos || minusPos > opPos) {
+      opPos = minusPos;
+      opChar = '-';
+    }
+  }
+
+  uint16_t address = 0;
+
+  if (opPos == std::string::npos) {
+    // Single operand: either a number or a register
+    std::string op = trim(content);
+    if (isRegister(op)) {
+      address = getRegisterValue(op);
+    } else {
+      address = parseImmediate(op);
+    }
+  } else {
+    // Two operands with +/-
+    std::string left = trim(content.substr(0, opPos));
+    std::string right = trim(content.substr(opPos + 1));
+
+    uint16_t leftVal = 0;
+    if (isRegister(left)) {
+      leftVal = getRegisterValue(left);
+    } else {
+      leftVal = parseImmediate(left);
+    }
+
+    uint16_t rightVal = 0;
+    if (isRegister(right)) {
+      rightVal = getRegisterValue(right);
+    } else {
+      rightVal = parseImmediate(right);
+    }
+
+    if (opChar == '+') {
+      address = leftVal + rightVal;
+    } else {
+      address = leftVal - rightVal;
+    }
+  }
+
+  return address;
 }

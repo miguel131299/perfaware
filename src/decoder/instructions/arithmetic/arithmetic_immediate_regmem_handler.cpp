@@ -1,17 +1,12 @@
 #include "arithmetic_immediate_regmem_handler.hpp"
 
-#include "operand_decoder.hpp"
-#include "tables/registers.hpp"
 #include "instructions/mov/mov_utilities.hpp"
 #include "instructions/utilities/bit_utilities.hpp"
+#include "operand_decoder.hpp"
+#include "tables/registers.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <string>
-
-static std::string addExplicitSizeToImmediate(std::string &immediate,
-                                              bool isWordOperation) {
-  return std::string(isWordOperation ? "word" : "byte") + " " + immediate;
-}
 
 uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
     std::stringstream &ss, MODEncoding mod, uint8_t rmBits,
@@ -42,8 +37,9 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
       Operand immediate = OperandDecoder::decodeImmediate(
           bytestream, baseOffset + 4, isImmediateWord);
 
-      outputFunc_(ss, memOperand.value,
-                  addExplicitSizeToImmediate(immediate.value, isWordOperation));
+      outputFunc_(ss,
+                  addExplicitSizeToMemory(memOperand.value, isWordOperation),
+                  immediate.value);
 
       return isImmediateWord ? 6 : 5;
     }
@@ -52,8 +48,8 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
     Operand immediate = OperandDecoder::decodeImmediate(
         bytestream, baseOffset + 2, isImmediateWord);
 
-    outputFunc_(ss, memOperand.value,
-                addExplicitSizeToImmediate(immediate.value, isWordOperation));
+    outputFunc_(ss, addExplicitSizeToMemory(memOperand.value, isWordOperation),
+                immediate.value);
 
     return isImmediateWord ? 4 : 3;
   }
@@ -67,8 +63,8 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
     Operand immediate = OperandDecoder::decodeImmediate(
         bytestream, baseOffset + 3, isImmediateWord);
 
-    outputFunc_(ss, memOperand,
-                addExplicitSizeToImmediate(immediate.value, isWordOperation));
+    outputFunc_(ss, addExplicitSizeToMemory(memOperand, isWordOperation),
+                immediate.value);
 
     return isImmediateWord ? 5 : 4;
   }
@@ -83,8 +79,8 @@ uint32_t ArithmeticImmediateRegMemHandler::handleAddressingMode(
     Operand immediate = OperandDecoder::decodeImmediate(
         bytestream, baseOffset + 4, isImmediateWord);
 
-    outputFunc_(ss, memOperand,
-                addExplicitSizeToImmediate(immediate.value, isWordOperation));
+    outputFunc_(ss, addExplicitSizeToMemory(memOperand, isWordOperation),
+                immediate.value);
     return isImmediateWord ? 6 : 5;
   }
   }

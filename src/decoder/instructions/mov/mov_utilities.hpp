@@ -79,3 +79,16 @@ inline std::string formatDisplacement(const std::string &baseAddress,
 
   return "[" + baseAddress + " + " + std::to_string(displacement) + "]";
 }
+
+//-----------------------------------------------------------------------------
+// Helper to add size prefix to memory operand
+// [BP + 4] -> WORD [BP + 4]
+inline std::string addExplicitSizeToMemory(const std::string &memory,
+                                           bool isWordOperation) {
+  // Prepend size prefix before the memory operand
+  if (memory.empty() || memory.front() != '[') {
+    return memory; // Not a memory operand, return as-is
+  }
+  std::string size = isWordOperation ? "WORD" : "BYTE";
+  return size + " " + memory;
+}
