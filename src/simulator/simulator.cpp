@@ -141,9 +141,12 @@ bool Simulator::decodeAndExecuteStep() {
 
   if (trackRegister) {
     uint16_t newValue = getRegisterValue(regName);
-    traceOutput << " ; " << regName << ":0x" << std::hex << oldValue << "->0x"
-                << newValue << std::dec;
-    hasComment = true;
+    // Only track if value actually changed
+    if (oldValue != newValue) {
+      traceOutput << " ; " << regName << ":0x" << std::hex << oldValue << "->0x"
+                  << newValue << std::dec;
+      hasComment = true;
+    }
   }
 
   // Output IP changes if tracking is enabled
