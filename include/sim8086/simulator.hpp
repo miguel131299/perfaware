@@ -24,6 +24,12 @@ public:
   // Get execution trace output
   std::string getTrace() const;
 
+  // Dump memory content (non-zero bytes only) - hex format for console
+  std::string dumpMemory() const;
+
+  // Dump raw memory content to binary (all 64KB)
+  std::string dumpMemoryRaw() const;
+
 private:
   // Instruction representation
   struct Instruction {

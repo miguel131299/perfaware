@@ -233,6 +233,51 @@ std::string Simulator::dumpState() const {
 
 std::string Simulator::getTrace() const { return traceOutput.str(); }
 
+std::string Simulator::dumpMemory() const {
+  std::ostringstream oss;
+  oss << "Memory content:\n";
+
+  // Find the range of non-zero memory
+  uint32_t firstNonZero = memory.size();
+  uint32_t lastNonZero = 0;
+  
+  for (uint32_t i = 0; i < memory.size(); i++) {
+    if (memory[i] != 0) {
+      if (i < firstNonZero) firstNonZero = i;
+      lastNonZero = i;
+    }
+  }
+
+  // If no non-zero bytes, just say so
+  if (firstNonZero == memory.size()) {
+    oss << "  (all zeros)\n";
+    return oss.str();
+  }
+
+  // Dump memory in 16-byte rows
+  for (uint32_t addr = firstNonZero; addr <= lastNonZero; addr += 16) {
+    oss << "  0x" << std::hex << std::setfill('0') << std::setw(4) << addr << ": ";
+    
+    // Print bytes in this row
+    for (uint32_t i = 0; i < 16 && addr + i < memory.size(); i++) {
+      if (i == 8) oss << " "; // Space in the middle
+      oss << std::hex << std::setfill('0') << std::setw(2) 
+          << static_cast<int>(memory[addr + i]) << " ";
+    }
+    
+    oss << "\n";
+  }
+
+  oss << std::dec; // Reset to decimal for any following output
+  return oss.str();
+}
+
+std::string Simulator::dumpMemoryRaw() const {
+  // Return raw memory as binary string (all 64KB)
+  std::string result(memory.begin(), memory.end());
+  return result;
+}
+
 std::string Simulator::getFlagString() const {
   // Build flag string with flags in order: C, P, A, Z, S, O
   // For this simulator we track: C (carry), P (parity), A (auxiliary), Z
