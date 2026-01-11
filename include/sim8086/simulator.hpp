@@ -10,7 +10,7 @@
 class Simulator {
 public:
   // Initialize simulator with bytecode to execute
-  explicit Simulator(const std::vector<char> &bytestream);
+  explicit Simulator(const std::vector<char> &bytestream, bool trackIPRegister = false);
 
   // Execute all instructions in the bytecode
   void run();
@@ -50,6 +50,7 @@ private:
       bool overflow = false;
       bool carry = false;
       bool parity = false;
+      bool auxiliary = false;  // Auxiliary Carry flag (AF)
     } flags;
   } registers;
 
@@ -61,6 +62,9 @@ private:
 
   // Current instruction pointer (byte offset into bytestream)
   uint32_t instructionPointer = 0;
+
+  // Whether to track IP register changes in trace output
+  bool trackIPRegister = false;
 
   // Trace output stream for execution steps
   std::ostringstream traceOutput;
@@ -104,6 +108,7 @@ private:
   void handleCarryFlag(bool carry);
   void handleOverflowFlag(bool overflow);
   void handleParityFlag(uint16_t val);
+  void handleAuxiliaryFlag(uint16_t oldVal, uint16_t newVal);
 
   // Helper: Get flag state as string (e.g., "SPZ" for Sign, Parity, Zero)
   std::string getFlagString() const;

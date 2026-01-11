@@ -10,6 +10,7 @@
 
 struct SimulatorTestParameters {
   std::string filename;
+  bool trackIPRegister = false;
 };
 
 // Normalize output for comparison: lowercase, remove Windows line endings,
@@ -87,7 +88,7 @@ TEST_P(SimulatorTest, ExecutionOutput) {
 
     // Load and run simulator
     std::vector<char> bytecode = Utils::readBinaryFile(binaryPath);
-    Simulator simulator(bytecode);
+    Simulator simulator(bytecode, param.trackIPRegister);
     simulator.run();
 
     // Get trace and state (with blank line separator)
@@ -106,4 +107,5 @@ INSTANTIATE_TEST_SUITE_P(
     SimulatorExecution, SimulatorTest,
     ::testing::Values(SimulatorTestParameters{"listing_0043_immediate_movs"},
                       SimulatorTestParameters{"listing_0044_register_movs"},
-                      SimulatorTestParameters{"listing_0046_add_sub_cmp"}));
+                      SimulatorTestParameters{"listing_0046_add_sub_cmp"},
+                      SimulatorTestParameters{"listing_0048_ip_register", true}));

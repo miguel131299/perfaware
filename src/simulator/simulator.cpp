@@ -11,8 +11,8 @@
 #include <stdexcept>
 #include <unordered_map>
 
-Simulator::Simulator(const std::vector<char> &bytestream)
-    : memory(65536, 0), bytestream(bytestream) {
+Simulator::Simulator(const std::vector<char> &bytestream, bool trackIPRegister)
+    : memory(65536, 0), bytestream(bytestream), trackIPRegister(trackIPRegister) {
   // Initialize register getter map - each instance has its own capturing this
   getRegisterMap = {
       {"AX", [this]() { return registers.ax; }},
@@ -91,6 +91,9 @@ bool Simulator::decodeAndExecuteStep() {
     return false; // End of program
   }
 
+  // Capture old IP before execution
+  uint32_t oldIP = instructionPointer;
+
   // Decode one instruction at current IP
   auto [decodedStr, nextIP] =
       Decoder::decodeOneInstruction(bytestream, instructionPointer);
@@ -130,16 +133,30 @@ bool Simulator::decodeAndExecuteStep() {
 
   // Output trace
   traceOutput << decodedStr;
+  
+  // Track whether we've started the comment section
+  bool hasComment = false;
+  
   if (trackRegister) {
     uint16_t newValue = getRegisterValue(regName);
     traceOutput << " ; " << regName << ":0x" << std::hex << oldValue << "->0x"
                 << newValue << std::dec;
+    hasComment = true;
+  }
+
+  // Output IP changes if tracking is enabled
+  if (trackIPRegister) {
+    if (!hasComment) {
+      traceOutput << " ;";
+      hasComment = true;
+    }
+    traceOutput << " ip:0x" << std::hex << oldIP << "->0x" << nextIP
+                << std::dec;
   }
 
   // Output flag changes if any
   if (oldFlags != newFlags) {
-    // Only add semicolon if we didn't already output register change
-    if (!trackRegister) {
+    if (!hasComment) {
       traceOutput << " ;";
     }
     traceOutput << " flags:" << oldFlags << "->" << newFlags;
@@ -189,6 +206,13 @@ std::string Simulator::dumpState() const {
         << registers.di << " (" << std::dec << registers.di << ")\n";
   }
 
+  // Output IP register if tracking is enabled
+  if (trackIPRegister) {
+    oss << "      ip: 0x" << std::hex << std::setfill('0') << std::setw(4)
+        << instructionPointer << " (" << std::dec << instructionPointer
+        << ")\n";
+  }
+
   // Output final flags if any are set
   std::string flags = getFlagString();
   if (!flags.empty()) {
@@ -201,14 +225,15 @@ std::string Simulator::dumpState() const {
 std::string Simulator::getTrace() const { return traceOutput.str(); }
 
 std::string Simulator::getFlagString() const {
-  // Build flag string with flags in order: C, P, Z, S, O
-  // For this simulator we track: P (parity), Z (zero), S (sign), C (carry), O
-  // (overflow)
+  // Build flag string with flags in order: C, P, A, Z, S, O
+  // For this simulator we track: C (carry), P (parity), A (auxiliary), Z (zero), S (sign), O (overflow)
   std::string flags;
   if (registers.flags.carry)
     flags += "C";
   if (registers.flags.parity)
     flags += "P";
+  if (registers.flags.auxiliary)
+    flags += "A";
   if (registers.flags.zero)
     flags += "Z";
   if (registers.flags.sign)
@@ -303,6 +328,13 @@ void Simulator::handleParityFlag(uint16_t val) {
   registers.flags.parity = (count % 2 == 0);
 }
 
+void Simulator::handleAuxiliaryFlag(uint16_t oldVal, uint16_t newVal) {
+  // Auxiliary Carry flag (AF) is set if there was a carry from bit 3 to bit 4
+  // in the lower nibble (4 bits)
+  uint16_t carry = (oldVal & 0xF) + (newVal & 0xF);
+  registers.flags.auxiliary = (carry > 0xF);
+}
+
 void Simulator::executeAdd(const std::string &dest, const std::string &src) {
   uint16_t srcVal = resolveOperand(src);
   uint16_t destVal = resolveOperand(dest);
@@ -321,8 +353,12 @@ void Simulator::executeAdd(const std::string &dest, const std::string &src) {
   bool resultSign = (result & 0x8000) != 0;
   bool overflow = (destSign == srcSign) && (destSign != resultSign);
 
+  // Auxiliary carry: carry from bit 3 to bit 4
+  uint16_t auxCarry = ((destVal & 0xF) + (srcVal & 0xF)) & 0x10;
+
   setOperand(dest, result);
   setFlags(result, carry, overflow);
+  registers.flags.auxiliary = (auxCarry != 0);
 }
 
 void Simulator::executeSub(const std::string &dest, const std::string &src) {
@@ -352,6 +388,9 @@ void Simulator::performSubtraction(const std::string &dest,
   bool resultSign = (result & 0x8000) != 0;
   bool overflow = (destSign != srcSign) && (destSign != resultSign);
 
+  // Auxiliary carry: borrow from bit 4 in lower nibble
+  uint16_t auxBorrow = (destVal & 0xF) < (srcVal & 0xF) ? 1 : 0;
+
   // Only store result if this is SUB, not CMP
   if (storeResult) {
     setOperand(dest, result);
@@ -359,6 +398,7 @@ void Simulator::performSubtraction(const std::string &dest,
 
   // Always update flags
   setFlags(result, carry, overflow);
+  registers.flags.auxiliary = (auxBorrow != 0);
 }
 
 void Simulator::executeJump(const std::string &mnemonic) {
