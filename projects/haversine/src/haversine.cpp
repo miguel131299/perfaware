@@ -152,8 +152,9 @@ void HaversineGenerator::writeBinaryResults(const std::string& filename) const {
     file.write(reinterpret_cast<const char*>(&distance), sizeof(double));
   }
   
-  // Write the sum as the final double
-  file.write(reinterpret_cast<const char*>(&expectedSum), sizeof(double));
+  // Write the average as the final double
+  double average = expectedSum / distances.size();
+  file.write(reinterpret_cast<const char*>(&average), sizeof(double));
   
   file.close();
 }
