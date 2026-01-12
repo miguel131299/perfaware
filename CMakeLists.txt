@@ -32,3 +32,4 @@ enable_testing()
 # Include subprojects
 # ----------------------
 add_subdirectory(projects/sim8086)
+add_subdirectory(projects/haversine)
