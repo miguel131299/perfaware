@@ -11,6 +11,7 @@
 struct SimulatorTestParameters {
   std::string filename;
   bool trackIPRegister = false;
+  bool trackCycles = false;
 };
 
 // Normalize output for comparison: lowercase, remove Windows line endings,
@@ -88,7 +89,7 @@ TEST_P(SimulatorTest, ExecutionOutput) {
 
     // Load and run simulator
     std::vector<char> bytecode = Utils::readBinaryFile(binaryPath);
-    Simulator simulator(bytecode, param.trackIPRegister);
+    Simulator simulator(bytecode, param.trackIPRegister, param.trackCycles);
     simulator.run();
 
     // Get trace and state (with blank line separator)
@@ -113,4 +114,7 @@ INSTANTIATE_TEST_SUITE_P(
         SimulatorTestParameters{"listing_0049_conditional_jumps", true},
         SimulatorTestParameters{"listing_0051_memory_mov", true},
         SimulatorTestParameters{"listing_0052_memory_add_loop", true},
-        SimulatorTestParameters{"listing_0053_add_loop_challenge", true}));
+        SimulatorTestParameters{"listing_0053_add_loop_challenge", true},
+        SimulatorTestParameters{"listing_0056_estimating_cycles", true, true}));
+
+

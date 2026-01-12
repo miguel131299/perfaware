@@ -18,7 +18,9 @@
       "request": "launch",
       "name": "Debug Last Simulator Test",
       "program": "${workspaceFolder}/build/tests/sim8086_tests",
-      "args": ["--gtest_filter=SimulatorExecution/SimulatorTest.ExecutionOutput/7"],
+      "args": [
+        "--gtest_filter=SimulatorExecution/SimulatorTest.ExecutionOutput/8"
+      ],
       "cwd": "${workspaceFolder}/build",
       "env": { "TEST_DATA_DIR": "../listings" }
     },

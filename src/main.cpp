@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
     if (executeProgram) {
       // Execute the program
-      Simulator simulator(data);
+      Simulator simulator(data, false, true);  // trackCycles = true
       simulator.run();
       
       if (dumpBinary) {

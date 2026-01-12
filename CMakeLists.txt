@@ -32,6 +32,7 @@ enable_testing()
 set(SIM8086_HEADERS 
       include/sim8086/decoder.hpp
       include/sim8086/utils.hpp
+      include/sim8086/instruction_cycles.hpp
 )
 
 set(SIM8086_SOURCES 
@@ -47,6 +48,7 @@ set(SIM8086_SOURCES
       src/decoder/instructions/mov/mov_mem_accumulator_handler.cpp
       src/decoder/instructions/mov/mov_accumulator_mem_handler.cpp
       src/simulator/simulator.cpp
+      src/instruction_cycles.cpp
       src/utils/utils.cpp
 )
 

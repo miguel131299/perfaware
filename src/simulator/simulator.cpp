@@ -1,5 +1,6 @@
 #include "sim8086/simulator.hpp"
 #include "sim8086/decoder.hpp"
+#include "sim8086/instruction_cycles.hpp"
 
 #include <cctype>
 #include <cstdint>
@@ -11,9 +12,9 @@
 #include <stdexcept>
 #include <unordered_map>
 
-Simulator::Simulator(const std::vector<char> &bytestream, bool trackIPRegister)
+Simulator::Simulator(const std::vector<char> &bytestream, bool trackIPRegister, bool trackCycles)
     : memory(65536, 0), bytecodeSize(bytestream.size()),
-      trackIPRegister(trackIPRegister) {
+      trackIPRegister(trackIPRegister), trackCycles(trackCycles) {
   // Load bytecode into memory starting at address 0
   for (size_t i = 0; i < bytestream.size(); i++) {
     memory[i] = static_cast<uint8_t>(bytestream[i]);
@@ -131,10 +132,14 @@ bool Simulator::decodeAndExecuteStep() {
 
   // Capture old flag state before execution
   std::string oldFlags = getFlagString();
-
   // Execute instruction and get next IP
   uint32_t actualNextIP = executeInstruction(parsed, registers.ip, nextIP);
   registers.ip = actualNextIP;
+
+  // Calculate cycles and accumulate
+  CycleBreakdown breakdown = InstructionCycles::getCycleBreakdown(parsed);
+  uint32_t instructionCycles = breakdown.totalCycles;
+  totalCycles += instructionCycles;
 
   // Get new flag state after execution
   std::string newFlags = getFlagString();
@@ -142,34 +147,41 @@ bool Simulator::decodeAndExecuteStep() {
   // Output trace
   traceOutput << decodedStr;
 
-  // Track whether we've started the comment section
-  bool hasComment = false;
+  // Output cycle information if tracking is enabled
+  if (trackCycles) {
+    traceOutput << " ; Clocks: +" << instructionCycles << " = " << totalCycles;
+    
+    // Add EA breakdown if present
+    if (breakdown.eaCycles > 0) {
+      traceOutput << " (" << breakdown.baseCycles << " + " << breakdown.eaCycles << "ea)";
+    }
+    
+    // Add pipe separator if we're showing registers or IP
+    if (trackRegister || trackIPRegister) {
+      traceOutput << " |";
+    }
+  } else if (trackRegister || trackIPRegister || oldFlags != newFlags) {
+    // Add comment separator if we're showing register/flag info but not cycles
+    traceOutput << " ;";
+  }
 
   if (trackRegister) {
     uint16_t newValue = getRegisterValue(regName);
     // Only track if value actually changed
     if (oldValue != newValue) {
-      traceOutput << " ; " << regName << ":0x" << std::hex << oldValue << "->0x"
+      traceOutput << " " << regName << ":0x" << std::hex << oldValue << "->0x"
                   << newValue << std::dec;
-      hasComment = true;
     }
   }
 
   // Output IP changes if tracking is enabled
   if (trackIPRegister) {
-    if (!hasComment) {
-      traceOutput << " ;";
-      hasComment = true;
-    }
     traceOutput << " ip:0x" << std::hex << oldIP << "->0x" << actualNextIP
                 << std::dec;
   }
 
   // Output flag changes if any
   if (oldFlags != newFlags) {
-    if (!hasComment) {
-      traceOutput << " ;";
-    }
     traceOutput << " flags:" << oldFlags << "->" << newFlags;
   }
 
@@ -298,7 +310,7 @@ std::string Simulator::getFlagString() const {
   return flags;
 }
 
-Simulator::Instruction Simulator::parseInstruction(const std::string &decoded) {
+Instruction Simulator::parseInstruction(const std::string &decoded) {
   // Lambda to trim whitespace (returns trimmed copy)
   auto trim = [](std::string s) {
     s.erase(0, s.find_first_not_of(" \t\r\n"));
@@ -312,7 +324,7 @@ Simulator::Instruction Simulator::parseInstruction(const std::string &decoded) {
 
   if (spacePos == std::string::npos) {
     // Just a mnemonic, no operands
-    return Instruction{trimmed, "", ""};
+    return {trimmed, "", ""};
   }
 
   std::string mnemonic = trimmed.substr(0, spacePos);
@@ -331,7 +343,7 @@ Simulator::Instruction Simulator::parseInstruction(const std::string &decoded) {
     srcOp = trim(operands.substr(commaPos + 1));
   }
 
-  return Instruction{mnemonic, destOp, srcOp};
+  return {mnemonic, destOp, srcOp};
 }
 
 uint32_t Simulator::executeInstruction(const Instruction &instr,
@@ -567,19 +579,6 @@ bool Simulator::shouldJump(const std::string &mnemonic) const {
   }
   // Unconditional jumps
   return true;
-}
-
-uint16_t &Simulator::getRegister(const std::string &regName) {
-  // TODO: Return reference to the appropriate register
-  // "AX" -> registers.ax
-  // "BX" -> registers.bx
-  // etc.
-  //
-  // For half-registers, this is trickier. Consider returning
-  // a reference to the full register and handling shifts in the caller,
-  // or use a helper function.
-
-  throw std::runtime_error("getRegister() not implemented");
 }
 
 uint16_t Simulator::getRegisterValue(const std::string &regName) const {

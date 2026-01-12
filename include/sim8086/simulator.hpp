@@ -6,11 +6,12 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "instruction_cycles.hpp"
 
 class Simulator {
 public:
   // Initialize simulator with bytecode to execute
-  explicit Simulator(const std::vector<char> &bytestream, bool trackIPRegister = false);
+  explicit Simulator(const std::vector<char> &bytestream, bool trackIPRegister = false, bool trackCycles = false);
 
   // Execute all instructions in the bytecode
   void run();
@@ -24,6 +25,9 @@ public:
   // Get execution trace output
   std::string getTrace() const;
 
+  // Get total cycles executed
+  uint32_t getCycles() const { return totalCycles; }
+
   // Dump memory content (non-zero bytes only) - hex format for console
   std::string dumpMemory() const;
 
@@ -31,13 +35,6 @@ public:
   std::string dumpMemoryRaw() const;
 
 private:
-  // Instruction representation
-  struct Instruction {
-    std::string mnemonic; // "mov", "add", "jne", etc.
-    std::string destOp;   // destination operand string
-    std::string srcOp;    // source operand string
-  };
-
   // Decoded instruction representation
   struct DecodedInstruction {
     uint32_t byteOffset;
@@ -70,8 +67,14 @@ private:
   // Whether to track IP register changes in trace output
   bool trackIPRegister = false;
 
+  // Whether to output cycle counts
+  bool trackCycles = false;
+
   // Trace output stream for execution steps
   std::ostringstream traceOutput;
+
+  // Total cycle count
+  uint32_t totalCycles = 0;
 
   // Decode and execute a single instruction at the current instruction pointer
   // Returns false if at end of bytecode
@@ -139,10 +142,6 @@ private:
   // Helper: Parse immediate value from string
   // "5" -> 5, "-30" -> 0xFFE2 (two's complement), "0x1234" -> 0x1234
   uint16_t parseImmediate(const std::string &immediate) const;
-
-  // Helper: Get the name of a register from string
-  // "AX" -> ax field address, "BL" -> lower byte of ax, etc.
-  uint16_t &getRegister(const std::string &regName);
 
   // Helper: Operand type checking
   bool isRegister(const std::string &operand) const;
