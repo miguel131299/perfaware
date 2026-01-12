@@ -28,40 +28,7 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-# Sources 
-set(SIM8086_HEADERS 
-      include/sim8086/decoder.hpp
-      include/sim8086/utils.hpp
-      include/sim8086/instruction_cycles.hpp
-)
-
-set(SIM8086_SOURCES 
-      src/decoder/decoder.cpp
-      src/decoder/operand_decoder.cpp
-      src/decoder/instructions/generic/generic_regmem_handler.cpp
-      src/decoder/instructions/jumps/generic_jump_handler.cpp
-      src/decoder/instructions/arithmetic/arithmetic_immediate_accumulator_handler.cpp
-      src/decoder/instructions/arithmetic/arithmetic_immediate_regmem_handler.cpp
-      src/decoder/instructions/arithmetic/immediate_regmem_group_handler.cpp
-      src/decoder/instructions/mov/mov_immediate_handler.cpp
-      src/decoder/instructions/mov/mov_immediate_regmem_handler.cpp
-      src/decoder/instructions/mov/mov_mem_accumulator_handler.cpp
-      src/decoder/instructions/mov/mov_accumulator_mem_handler.cpp
-      src/simulator/simulator.cpp
-      src/instruction_cycles.cpp
-      src/utils/utils.cpp
-)
-
-# Core library
-add_library(sim8086_core STATIC ${SIM8086_SOURCES})
-target_include_directories(sim8086_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_include_directories(sim8086_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/decoder)
-target_include_directories(sim8086_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/simulator)
-
-# Main Binary
-add_executable(sim8086 src/main.cpp)
-target_link_libraries(sim8086 PRIVATE sim8086_core)
-target_include_directories(sim8086 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-# Tests
-add_subdirectory(tests)
+# ----------------------
+# Include subprojects
+# ----------------------
+add_subdirectory(projects/sim8086)
