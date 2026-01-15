@@ -2,11 +2,13 @@
 
 set(HAVERSINE_SOURCES
       ${CMAKE_CURRENT_SOURCE_DIR}/src/haversine.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/src/processor.cpp
 )
 
 set(HAVERSINE_HEADERS
       ${CMAKE_CURRENT_SOURCE_DIR}/include/haversine/haversine.hpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/include/haversine/parser.hpp
       ${CMAKE_CURRENT_SOURCE_DIR}/include/haversine/processor.hpp
 )
 
