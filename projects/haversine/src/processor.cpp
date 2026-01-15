@@ -36,16 +36,27 @@ double HaversineProcessor::computeHaversine(const Point &p0, const Point &p1) {
 }
 
 void HaversineProcessor::parseJSON(const std::string &filename) {
-  // TODO: Open file and read JSON
+  // Use the split functions to avoid code duplication
+  std::string jsonContent = readJSONFile(filename);
+  parseJSONString(jsonContent);
+}
+
+std::string HaversineProcessor::readJSONFile(const std::string &filename) {
   std::ifstream file(filename, std::ios::binary);
 
   if (!file) {
-    std::cerr << "Could not open file: " << filename << "\n";
-    return;
+    throw std::runtime_error("Could not open file: " + filename);
   }
 
-  Parser p(file);
-  // TODO: does this need to be a move?
+  // Read entire file into string
+  std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  return content;
+}
+
+void HaversineProcessor::parseJSONString(const std::string &jsonContent) {
+  // Parse from a string stream
+  std::istringstream iss(jsonContent);
+  Parser p(iss);
   pairs = p.parse_document();
 }
 

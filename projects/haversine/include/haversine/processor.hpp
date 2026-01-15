@@ -9,7 +9,13 @@
 
 class HaversineProcessor {
 public:
-  // Parse JSON file and extract point pairs
+  // Read JSON file into memory
+  std::string readJSONFile(const std::string &filename);
+
+  // Parse JSON string and extract point pairs
+  void parseJSONString(const std::string &jsonContent);
+
+  // Parse JSON file and extract point pairs (combines read and parse)
   void parseJSON(const std::string &filename);
 
   // Read reference data from binary file
