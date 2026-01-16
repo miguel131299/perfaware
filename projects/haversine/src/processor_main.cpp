@@ -8,35 +8,22 @@
 #include <fstream>
 
 int main(int argc, char *argv[]) {
-  // Quick check for profiling flag
-  bool enableProfiling = false;
-  for (int i = 2; i < argc; ++i) {
-    if (std::string(argv[i]) == "--profile" || std::string(argv[i]) == "-p") {
-      enableProfiling = true;
-      break;
-    }
-  }
-  
-  if (enableProfiling) {
-    BeginProfile();
-  }
-
   if (argc < 2) {
-    std::cerr << "Usage: haversine_processor <json_file> [binary_file] [--profile]\n";
+    std::cerr << "Usage: haversine_processor <json_file> [binary_file]\n";
     return 1;
   }
 
   std::string jsonFile = argv[1];
   std::string binaryFile;
 
-  // Parse arguments for binary file and --profile flag
+  // Parse arguments for binary file
   for (int i = 2; i < argc; ++i) {
-    if (std::string(argv[i]) == "--profile" || std::string(argv[i]) == "-p") {
-      enableProfiling = true;
-    } else if (binaryFile.empty()) {
+    if (binaryFile.empty()) {
       binaryFile = argv[i];
     }
   }
+
+  BeginProfile();
 
   try {
     HaversineProcessor processor;
@@ -69,12 +56,10 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    if (enableProfiling) {
-      u64 pairCount = processor.getDistances().size();
-      printf("\nInput size: %llu\n", (unsigned long long)inputSize);
-      printf("Pair count: %llu\n", (unsigned long long)pairCount);
-      EndAndPrintProfile();
-    }
+    u64 pairCount = processor.getDistances().size();
+    printf("\nInput size: %llu\n", (unsigned long long)inputSize);
+    printf("Pair count: %llu\n", (unsigned long long)pairCount);
+    EndAndPrintProfile();
 
     return 0;
   } catch (const std::exception &e) {

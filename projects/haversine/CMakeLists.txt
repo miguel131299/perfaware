@@ -1,5 +1,8 @@
 # Haversine Project - Haversine distance calculator and data generator
 
+# Option to enable/disable profiling
+option(ENABLE_PROFILING "Enable profiling in haversine processor" ON)
+
 set(HAVERSINE_SOURCES
       ${CMAKE_CURRENT_SOURCE_DIR}/src/haversine.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.cpp
@@ -25,3 +28,8 @@ target_include_directories(haversine_gen PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inc
 add_executable(haversine_processor ${CMAKE_CURRENT_SOURCE_DIR}/src/processor_main.cpp)
 target_link_libraries(haversine_processor PRIVATE haversine)
 target_include_directories(haversine_processor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Apply profiling option
+if(NOT ENABLE_PROFILING)
+  target_compile_definitions(haversine_processor PRIVATE ENABLE_PROFILING=0)
+endif()

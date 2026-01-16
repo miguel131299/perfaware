@@ -63,7 +63,6 @@ bool Parser::match(char ch) {
 }
 
 std::string Parser::parse_string() {
-  TIME_BLOCK("ParseString");
   skip_ws();
   if (get() != '"')
     error("Expected '\"'");
@@ -81,7 +80,6 @@ std::string Parser::parse_string() {
 }
 
 double Parser::parse_number() {
-  TIME_BLOCK("ParseNumber");
   skip_ws();
 
   std::string buf;
@@ -106,7 +104,6 @@ double Parser::parse_number() {
 }
 
 std::vector<PointPair> Parser::parse_pairs_array() {
-  TIME_BLOCK("ParsePairsArray");
   expect('[');
   std::vector<PointPair> out;
 
@@ -123,7 +120,6 @@ std::vector<PointPair> Parser::parse_pairs_array() {
 }
 
 PointPair Parser::parse_pair_object() {
-  TIME_BLOCK("ParsePairObject");
   expect('{');
   PointPair p{};
   int seen = 0; // x0=1, y0=2, x1=4, y1=8
@@ -164,7 +160,6 @@ PointPair Parser::parse_pair_object() {
 }
 
 std::vector<PointPair> Parser::parse_document() {
-  TIME_BLOCK("ParseDocument");
   skip_ws();
   expect('{');
 

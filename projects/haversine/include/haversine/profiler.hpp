@@ -1,5 +1,12 @@
 #pragma once
 
+// Set to 1 to enable profiling, 0 to disable (zero overhead when disabled)
+#ifndef ENABLE_PROFILING
+#define ENABLE_PROFILING 1
+#endif
+
+#if ENABLE_PROFILING
+
 #include "haversine/platform_metrics.hpp"
 
 #include <cstdint>
@@ -32,10 +39,10 @@ struct GlobalProfiler {
     return g;
   }
   
-  void begin(u64 freq = 0) {
+  void begin() {
     entryCount = 0;
     parentStackDepth = 0;
-    cpuFreq = freq ? freq : EstimateCPUFreq(100);
+    cpuFreq = EstimateCPUFreq(100);
     startTime = ReadCPUTimer();
   }
   
@@ -98,6 +105,9 @@ struct GlobalProfiler {
     
     // Print by nesting level
     printEntriesByDepth(0, -1);
+    
+    // Print aggregated results
+    printAggregatedResults();
   }
   
 private:
@@ -131,10 +141,65 @@ private:
       }
     }
   }
+  
+  void printAggregatedResults() {
+    printf("\n\nAggregated by block (exclusive times, all nesting levels):\n");
+    
+    // Aggregate exclusive times by label
+    struct AggregatedEntry {
+      char label[64];
+      u64 totalExclusiveCycles = 0;
+      u64 totalHits = 0;
+    };
+    
+    AggregatedEntry aggregated[MAX_ENTRIES];
+    size_t aggregatedCount = 0;
+    
+    for (size_t i = 0; i < entryCount; ++i) {
+      u64 exclusiveCycles = entries[i].elapsedCycles - entries[i].elapsedChildrenCycles;
+      
+      // Find or create aggregated entry
+      bool found = false;
+      for (size_t j = 0; j < aggregatedCount; ++j) {
+        if (std::strcmp(aggregated[j].label, entries[i].label) == 0) {
+          aggregated[j].totalExclusiveCycles += exclusiveCycles;
+          aggregated[j].totalHits += entries[i].hitCount;
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found && aggregatedCount < MAX_ENTRIES) {
+        std::strncpy(aggregated[aggregatedCount].label, entries[i].label, sizeof(aggregated[aggregatedCount].label) - 1);
+        aggregated[aggregatedCount].label[sizeof(aggregated[aggregatedCount].label) - 1] = '\0';
+        aggregated[aggregatedCount].totalExclusiveCycles = exclusiveCycles;
+        aggregated[aggregatedCount].totalHits = entries[i].hitCount;
+        aggregatedCount++;
+      }
+    }
+    
+    // Print aggregated results sorted by time (descending)
+    for (size_t i = 0; i < aggregatedCount; ++i) {
+      for (size_t j = i + 1; j < aggregatedCount; ++j) {
+        if (aggregated[j].totalExclusiveCycles > aggregated[i].totalExclusiveCycles) {
+          std::swap(aggregated[i], aggregated[j]);
+        }
+      }
+    }
+    
+    for (size_t i = 0; i < aggregatedCount; ++i) {
+      double pct = totalTime > 0 ? (double)aggregated[i].totalExclusiveCycles / (double)totalTime * 100.0 : 0.0;
+      printf("  %s: %llu cycles (%.2f%%) [%llu hits]\n",
+             aggregated[i].label,
+             (unsigned long long)aggregated[i].totalExclusiveCycles,
+             pct,
+             (unsigned long long)aggregated[i].totalHits);
+    }
+  }
 };
 
-inline void BeginProfile(u64 cpuFreq = 0) {
-  GlobalProfiler::instance().begin(cpuFreq);
+inline void BeginProfile() {
+  GlobalProfiler::instance().begin();
 }
 
 inline void EndAndPrintProfile() {
@@ -145,19 +210,16 @@ inline void EndAndPrintProfile() {
 struct ScopedTimer {
   int entryIndex;
   u64 startCycles;
-  bool enabled;
   
-  ScopedTimer(const char* label, bool en = true) : entryIndex(-1), startCycles(0), enabled(en) {
-    if (enabled) {
-      GlobalProfiler& prof = GlobalProfiler::instance();
-      entryIndex = prof.addEntry(label);
-      prof.pushParent(entryIndex);
-      startCycles = ReadCPUTimer();
-    }
+  ScopedTimer(const char* label) : entryIndex(-1), startCycles(0) {
+    GlobalProfiler& prof = GlobalProfiler::instance();
+    entryIndex = prof.addEntry(label);
+    prof.pushParent(entryIndex);
+    startCycles = ReadCPUTimer();
   }
   
   ~ScopedTimer() {
-    if (enabled && entryIndex >= 0) {
+    if (entryIndex >= 0) {
       u64 elapsed = ReadCPUTimer() - startCycles;
       GlobalProfiler::instance().recordElapsed(entryIndex, elapsed);
       GlobalProfiler::instance().popParent();
@@ -165,5 +227,14 @@ struct ScopedTimer {
   }
 };
 
-// Macro for easy scope timing - automatically detects if profiling is enabled
-#define TIME_BLOCK(label) ScopedTimer _scoped_timer_##__LINE__(label, GlobalProfiler::instance().startTime != 0)
+// Macro for easy scope timing
+#define TIME_BLOCK(label) ScopedTimer _scoped_timer_##__LINE__(label)
+
+#else
+
+// When profiling is disabled, all macros become no-ops
+inline void BeginProfile() {}
+inline void EndAndPrintProfile() {}
+#define TIME_BLOCK(label) (void)0
+
+#endif

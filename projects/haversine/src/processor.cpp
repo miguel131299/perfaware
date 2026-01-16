@@ -20,7 +20,6 @@ static double square(double A) {
 }
 
 double HaversineProcessor::computeHaversine(const Point &p0, const Point &p1) {
-  TIME_BLOCK("ComputeHaversine");
   double lat0 = degreesToRadians(p0.y);
   double lon0 = degreesToRadians(p0.x);
   double lat1 = degreesToRadians(p1.y);
