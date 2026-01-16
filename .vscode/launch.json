@@ -31,6 +31,14 @@
       "program": "${workspaceFolder}/build/sim8086",
       "args": ["./listings/listing_0041_add_sub_cmp_jnz"],
       "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Haversine Processor",
+      "program": "${workspaceFolder}/build/projects/haversine/haversine_processor",
+      "args": ["${workspaceFolder}/build/projects/haversine/data_json_1000000.json", "${workspaceFolder}/build/projects/haversine/data_bin_1000000.f64", "-p"],
+      "cwd": "${workspaceFolder}/build/projects/haversine"
     }
   ]
 }

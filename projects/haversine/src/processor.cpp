@@ -1,4 +1,5 @@
 #include "haversine/processor.hpp"
+#include "haversine/profiler.hpp"
 
 #include <cmath>
 #include <cstdio>
@@ -19,6 +20,7 @@ static double square(double A) {
 }
 
 double HaversineProcessor::computeHaversine(const Point &p0, const Point &p1) {
+  TIME_BLOCK("ComputeHaversine");
   double lat0 = degreesToRadians(p0.y);
   double lon0 = degreesToRadians(p0.x);
   double lat1 = degreesToRadians(p1.y);
@@ -42,6 +44,7 @@ void HaversineProcessor::parseJSON(const std::string &filename) {
 }
 
 std::string HaversineProcessor::readJSONFile(const std::string &filename) {
+  TIME_BLOCK("ReadJSONFile");
   std::ifstream file(filename, std::ios::binary);
 
   if (!file) {
@@ -49,11 +52,16 @@ std::string HaversineProcessor::readJSONFile(const std::string &filename) {
   }
 
   // Read entire file into string
-  std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  std::string content;
+  {
+    TIME_BLOCK("ReadingIntoBuffer");
+    content = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  }
   return content;
 }
 
 void HaversineProcessor::parseJSONString(const std::string &jsonContent) {
+  TIME_BLOCK("ParseJSONString");
   // Parse from a string stream
   std::istringstream iss(jsonContent);
   Parser p(iss);
@@ -61,6 +69,7 @@ void HaversineProcessor::parseJSONString(const std::string &jsonContent) {
 }
 
 double HaversineProcessor::readBinaryReference(const std::string &filename) {
+  TIME_BLOCK("ReadBinaryReference");
   std::ifstream file(filename, std::ios::binary);
   if (!file) {
     throw std::runtime_error("Could not open binary file: " + filename);
@@ -85,13 +94,20 @@ double HaversineProcessor::readBinaryReference(const std::string &filename) {
 }
 
 void HaversineProcessor::computeDistances() {
-  distances.clear();
-  sum = 0.0;
+  TIME_BLOCK("ComputeDistances");
+  {
+    TIME_BLOCK("ClearDistances");
+    distances.clear();
+    sum = 0.0;
+  }
 
-  for (const auto &pair : pairs) {
-    double distance = computeHaversine(pair.p0, pair.p1);
-    distances.push_back(distance);
-    sum += distance;
+  {
+    TIME_BLOCK("LoopAndSum");
+    for (const auto &pair : pairs) {
+      double distance = computeHaversine(pair.p0, pair.p1);
+      distances.push_back(distance);
+      sum += distance;
+    }
   }
 }
 
@@ -103,13 +119,20 @@ double HaversineProcessor::getAverage() const {
 }
 
 void HaversineProcessor::compareWithReference(double referenceSum) {
-  double computedAverage = getAverage();
-  double diff = std::abs(computedAverage - referenceSum);
-  double relativeError = diff / referenceSum;
+  TIME_BLOCK("CompareWithReference");
+  {
+    TIME_BLOCK("ComputeStats");
+    double computedAverage = getAverage();
+    double diff = std::abs(computedAverage - referenceSum);
+    double relativeError = diff / referenceSum;
 
-  std::cout << "Reference average: " << referenceSum << "\n";
-  std::cout << "Computed average:  " << computedAverage << "\n";
-  std::cout << "Difference:        " << diff << "\n";
-  std::cout << "Relative error:    " << (relativeError * 100.0) << "%\n";
-  std::cout << "Sum:               " << sum << "\n";
+    {
+      TIME_BLOCK("PrintOutput");
+      std::cout << "Reference average: " << referenceSum << "\n";
+      std::cout << "Computed average:  " << computedAverage << "\n";
+      std::cout << "Difference:        " << diff << "\n";
+      std::cout << "Relative error:    " << (relativeError * 100.0) << "%\n";
+      std::cout << "Sum:               " << sum << "\n";
+    }
+  }
 }
