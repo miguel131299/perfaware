@@ -8,6 +8,7 @@ typedef uint64_t u64;
 
 #include <intrin.h>
 #include <windows.h>
+#include <psapi.h>
 
 inline u64 GetOSTimerFreq(void)
 {
@@ -23,10 +24,34 @@ inline u64 ReadOSTimer(void)
 	return Value.QuadPart;
 }
 
+// Windows page fault tracking
+static HANDLE gProcessHandle = nullptr;
+
+inline void InitPageFaultTracking(void)
+{
+	if (!gProcessHandle) {
+		gProcessHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, GetCurrentProcessId());
+	}
+}
+
+inline u64 ReadPageFaultCount(void)
+{
+	if (!gProcessHandle) {
+		InitPageFaultTracking();
+	}
+	
+	PROCESS_MEMORY_COUNTERS pmc;
+	if (GetProcessMemoryInfo(gProcessHandle, &pmc, sizeof(pmc))) {
+		return pmc.PageFaultCount;
+	}
+	return 0;
+}
+
 #else
 
 #include <x86intrin.h>
 #include <sys/time.h>
+#include <sys/resource.h>
 
 inline u64 GetOSTimerFreq(void)
 {
@@ -40,6 +65,21 @@ inline u64 ReadOSTimer(void)
 	
 	u64 Result = GetOSTimerFreq()*(u64)Value.tv_sec + (u64)Value.tv_usec;
 	return Result;
+}
+
+// Linux page fault tracking via getrusage
+inline void InitPageFaultTracking(void)
+{
+	// No initialization needed on Linux
+}
+
+inline u64 ReadPageFaultCount(void)
+{
+	struct rusage usage;
+	getrusage(RUSAGE_SELF, &usage);
+	
+	// Major + minor page faults
+	return usage.ru_majflt + usage.ru_minflt;
 }
 
 #endif

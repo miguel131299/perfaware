@@ -26,6 +26,7 @@ struct RepetitionTester {
   u64 openBlockCount = 0;
   u64 closeBlockCount = 0;
   u64 timeAccumulated = 0;
+  u64 pageFaultsAccumulated = 0;
   u64 bytesAccumulated = 0;
   
   // Results
@@ -33,6 +34,9 @@ struct RepetitionTester {
   u64 totalTime = 0;
   u64 maxTime = 0;
   u64 minTime = UINT64_MAX;
+  u64 totalPageFaults = 0;
+  u64 minPageFaults = UINT64_MAX;
+  u64 maxPageFaults = 0;
   
   bool isFirstIteration = true;
   
@@ -49,22 +53,30 @@ struct RepetitionTester {
     totalTime = 0;
     maxTime = 0;
     minTime = UINT64_MAX;
+    totalPageFaults = 0;
+    minPageFaults = UINT64_MAX;
+    maxPageFaults = 0;
     isFirstIteration = true;
+    
+    InitPageFaultTracking();
     
     openBlockCount = 0;
     closeBlockCount = 0;
     timeAccumulated = 0;
+    pageFaultsAccumulated = 0;
     bytesAccumulated = 0;
   }
   
   void beginTime() {
     openBlockCount++;
     timeAccumulated -= ReadCPUTimer();
+    pageFaultsAccumulated -= ReadPageFaultCount();
   }
   
   void endTime() {
     closeBlockCount++;
     timeAccumulated += ReadCPUTimer();
+    pageFaultsAccumulated += ReadPageFaultCount();
   }
   
   void countBytes(u64 byteCount) {
@@ -99,13 +111,21 @@ struct RepetitionTester {
     // Update results
     testCount++;
     totalTime += timeAccumulated;
+    totalPageFaults += pageFaultsAccumulated;
     
     if (timeAccumulated > maxTime) {
       maxTime = timeAccumulated;
     }
     
+    if (pageFaultsAccumulated > maxPageFaults) {
+      maxPageFaults = pageFaultsAccumulated;
+    }
+    
     if (timeAccumulated < minTime) {
       minTime = timeAccumulated;
+      if (pageFaultsAccumulated < minPageFaults) {
+        minPageFaults = pageFaultsAccumulated;
+      }
       testsStartedAt = ReadCPUTimer();  // Reset trial timer on new minimum
       printResult();
     }
@@ -122,6 +142,7 @@ struct RepetitionTester {
     openBlockCount = 0;
     closeBlockCount = 0;
     timeAccumulated = 0;
+    pageFaultsAccumulated = 0;
     bytesAccumulated = 0;
     
     return true;
@@ -133,11 +154,12 @@ private:
     double mb = (double)targetProcessedByteCount / (1024.0 * 1024.0);
     double gbps = mb / seconds / 1024.0;
     
-    printf("  Test %4llu: %.3fmb in %.6fs = %.2fgb/s\n",
+    printf("  Test %4llu: %.3fmb in %.6fs = %.2fgb/s (%llu page faults)\n",
            (unsigned long long)testCount,
            mb,
            seconds,
-           gbps);
+           gbps,
+           (unsigned long long)minPageFaults);
   }
   
   void printFinalResults() {
@@ -148,9 +170,16 @@ private:
     double maxSeconds = (double)maxTime / (double)cpuTimerFreq;
     double avgSeconds = (double)(totalTime / testCount) / (double)cpuTimerFreq;
     
-    printf("Min time: %.6fs (%.3fms)\n", minSeconds, minSeconds * 1000.0);
-    printf("Max time: %.6fs (%.3fms)\n", maxSeconds, maxSeconds * 1000.0);
-    printf("Avg time: %.6fs (%.3fms)\n", avgSeconds, avgSeconds * 1000.0);
+    printf("Min time: %.6fs (%.3fms) [%llu cycles]\n", minSeconds, minSeconds * 1000.0, (unsigned long long)minTime);
+    printf("Max time: %.6fs (%.3fms) [%llu cycles]\n", maxSeconds, maxSeconds * 1000.0, (unsigned long long)maxTime);
+    u64 avgTime = testCount > 0 ? totalTime / testCount : 0;
+    printf("Avg time: %.6fs (%.3fms) [%llu cycles]\n", avgSeconds, avgSeconds * 1000.0, (unsigned long long)avgTime);
+    
+    printf("\nPage Faults:\n");
+    printf("  Min: %llu\n", (unsigned long long)minPageFaults);
+    printf("  Max: %llu\n", (unsigned long long)maxPageFaults);
+    u64 avgPageFaults = testCount > 0 ? totalPageFaults / testCount : 0;
+    printf("  Avg: %llu\n", (unsigned long long)avgPageFaults);
     
     double mb = (double)targetProcessedByteCount / (1024.0 * 1024.0);
     double minGbps = mb / minSeconds / 1024.0;
@@ -161,6 +190,18 @@ private:
     printf("  Best: %.2f gb/s (%.3fmb)\n", minGbps, mb);
     printf("  Worst: %.2f gb/s\n", maxGbps);
     printf("  Average: %.2f gb/s\n", avgGbps);
+    
+    printf("\nBytes per Page Fault:\n");
+    if (minPageFaults > 0) {
+      double bytesPerMinPF = (double)targetProcessedByteCount / (double)minPageFaults;
+      double bytesPerMaxPF = (double)targetProcessedByteCount / (double)maxPageFaults;
+      double bytesPerAvgPF = (double)targetProcessedByteCount / (double)(avgPageFaults > 0 ? avgPageFaults : 1);
+      printf("  Best: %.0f bytes/fault\n", bytesPerMinPF);
+      printf("  Worst: %.0f bytes/fault\n", bytesPerMaxPF);
+      printf("  Average: %.0f bytes/fault\n", bytesPerAvgPF);
+    } else {
+      printf("  (No page faults recorded)\n");
+    }
     printf("===============================\n\n");
   }
 };
