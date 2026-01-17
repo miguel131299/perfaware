@@ -18,6 +18,7 @@ struct ReadParameters {
   u64 fileSize;
   char *buffer; // Pre-allocated buffer
   AllocationType allocType;
+  u64 testTimeMs; // Test duration in milliseconds
 };
 
 // Handle memory allocation based on allocation type
@@ -66,7 +67,7 @@ static void testFread(ReadParameters *params) {
          params->allocType == AllocType_Malloc ? "Malloc" : "None");
 
   RepetitionTester tester;
-  tester.newTestWave(params->fileSize, 10000); // Try for 10 seconds
+  tester.newTestWave(params->fileSize, params->testTimeMs);
 
   REPETITION_TEST_BEGIN(tester) {
     FILE *f = fopen(params->filename, "rb");
@@ -106,7 +107,7 @@ static void testRead(ReadParameters *params) {
          params->allocType == AllocType_Malloc ? "Malloc" : "None");
 
   RepetitionTester tester;
-  tester.newTestWave(params->fileSize, 10000); // Try for 10 seconds
+  tester.newTestWave(params->fileSize, params->testTimeMs);
 
   REPETITION_TEST_BEGIN(tester) {
     int fd = open(params->filename, O_RDONLY);
@@ -146,7 +147,7 @@ static void testFreadChunked(ReadParameters *params) {
          params->allocType == AllocType_Malloc ? "Malloc" : "None");
 
   RepetitionTester tester;
-  tester.newTestWave(params->fileSize, 10000); // Try for 10 seconds
+  tester.newTestWave(params->fileSize, params->testTimeMs);
 
   const u64 CHUNK_SIZE = 64 * 1024; // 64KB chunks
 
@@ -199,12 +200,24 @@ typedef void (*TestFunction)(ReadParameters *);
 
 int main(int argc, char **argv) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+    fprintf(stderr, "Usage: %s <filename> [test_time_ms]\n", argv[0]);
+    fprintf(stderr, "  test_time_ms: duration for each test in milliseconds "
+                    "(default: 10000)\n");
     fprintf(stderr, "  Example: %s data_json_1000000.json\n", argv[0]);
+    fprintf(stderr, "  Example: %s data_json_1000000.json 5000\n", argv[0]);
     return 1;
   }
 
   const char *filename = argv[1];
+  u64 testTimeMs = 10000; // Default: 10 seconds
+
+  if (argc >= 3) {
+    testTimeMs = std::strtoull(argv[2], nullptr, 10);
+    if (testTimeMs == 0) {
+      fprintf(stderr, "ERROR: Invalid test time (must be > 0)\n");
+      return 1;
+    }
+  }
 
   struct stat st;
   if (stat(filename, &st) != 0) {
@@ -246,7 +259,8 @@ int main(int argc, char **argv) {
           }
         }
 
-        ReadParameters params = {filename, fileSize, buffer, allocType};
+        ReadParameters params = {filename, fileSize, buffer, allocType,
+                                 testTimeMs};
 
         // Run the test
         tests[testIdx](&params);
