@@ -33,3 +33,7 @@ target_include_directories(haversine_processor PRIVATE ${CMAKE_CURRENT_SOURCE_DI
 if(NOT ENABLE_PROFILING)
   target_compile_definitions(haversine_processor PRIVATE ENABLE_PROFILING=0)
 endif()
+
+# Repetition tester executable
+add_executable(repetition_tester ${CMAKE_CURRENT_SOURCE_DIR}/src/repetition_test_main.cpp)
+target_include_directories(repetition_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -52,6 +52,7 @@ std::string HaversineProcessor::readJSONFile(const std::string &filename) {
   // Read entire file into string
   std::string content;
   {
+    // TODO: can we not use stat here?
     // Get file size for bandwidth tracking
     file.seekg(0, std::ios::end);
     std::streampos fileSize = file.tellg();
