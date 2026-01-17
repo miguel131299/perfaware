@@ -19,12 +19,15 @@ struct ProfileEntry {
   u64 elapsedCycles;
   u64 elapsedChildrenCycles;
   u64 hitCount;
+  u64 processedByteCount;
   int parentIndex;
 };
 
 struct GlobalProfiler {
   static constexpr size_t MAX_ENTRIES = 256;
   static constexpr size_t MAX_PARENT_STACK = 32;
+  static constexpr double MEGABYTE = 1024.0 * 1024.0;
+  static constexpr double GIGABYTE = MEGABYTE * 1024.0;
   
   ProfileEntry entries[MAX_ENTRIES];
   size_t entryCount = 0;
@@ -64,6 +67,7 @@ struct GlobalProfiler {
     entries[newIndex].elapsedCycles = 0;
     entries[newIndex].elapsedChildrenCycles = 0;
     entries[newIndex].hitCount = 0;
+    entries[newIndex].processedByteCount = 0;
     entries[newIndex].parentIndex = parentIdx;
     entryCount++;
     
@@ -81,6 +85,11 @@ struct GlobalProfiler {
     if (parentIdx >= 0 && parentIdx < (int)entryCount) {
       entries[parentIdx].elapsedChildrenCycles += elapsedCycles;
     }
+  }
+  
+  void recordBandwidth(int entryIndex, u64 byteCount) {
+    if (entryIndex < 0 || entryIndex >= (int)entryCount) return;
+    entries[entryIndex].processedByteCount += byteCount;
   }
   
   void pushParent(int entryIndex) {
@@ -110,6 +119,16 @@ struct GlobalProfiler {
     printAggregatedResults();
   }
   
+  void printThroughput(u64 processedByteCount) {
+    if (processedByteCount > 0) {
+      double seconds = (double)processedByteCount / (double)cpuFreq;
+      double bytesPerSecond = (double)processedByteCount / seconds;
+      double megabytes = (double)processedByteCount / MEGABYTE;
+      double gigabytesPerSecond = bytesPerSecond / GIGABYTE;
+      printf(" - %.3fmb at %.2fgb/s", megabytes, gigabytesPerSecond);
+    }
+  }
+  
 private:
   void printEntriesByDepth(int depth, int parentIndex) {
     for (size_t i = 0; i < entryCount; ++i) {
@@ -122,19 +141,22 @@ private:
         for (int d = 0; d < depth; ++d) printf("  ");
         
         if (entries[i].elapsedChildrenCycles > 0) {
-          printf("%s: %llu cycles (%.2f%% excl, %.2f%% incl) [%llu hits]\n",
+          printf("%s: %llu cycles (%.2f%% excl, %.2f%% incl) [%llu hits]",
                  entries[i].label,
                  (unsigned long long)exclusiveCycles,
                  exclusivePct,
                  inclusivePct,
                  (unsigned long long)entries[i].hitCount);
         } else {
-          printf("%s: %llu cycles (%.2f%%) [%llu hits]\n",
+          printf("%s: %llu cycles (%.2f%%) [%llu hits]",
                  entries[i].label,
                  (unsigned long long)entries[i].elapsedCycles,
                  inclusivePct,
                  (unsigned long long)entries[i].hitCount);
         }
+        
+        printThroughput(entries[i].processedByteCount);
+        printf("\n");
         
         // Recursively print children
         printEntriesByDepth(depth + 1, i);
@@ -150,6 +172,7 @@ private:
       char label[64];
       u64 totalExclusiveCycles = 0;
       u64 totalHits = 0;
+      u64 totalProcessedBytes = 0;
     };
     
     AggregatedEntry aggregated[MAX_ENTRIES];
@@ -164,6 +187,7 @@ private:
         if (std::strcmp(aggregated[j].label, entries[i].label) == 0) {
           aggregated[j].totalExclusiveCycles += exclusiveCycles;
           aggregated[j].totalHits += entries[i].hitCount;
+          aggregated[j].totalProcessedBytes += entries[i].processedByteCount;
           found = true;
           break;
         }
@@ -174,6 +198,7 @@ private:
         aggregated[aggregatedCount].label[sizeof(aggregated[aggregatedCount].label) - 1] = '\0';
         aggregated[aggregatedCount].totalExclusiveCycles = exclusiveCycles;
         aggregated[aggregatedCount].totalHits = entries[i].hitCount;
+        aggregated[aggregatedCount].totalProcessedBytes = entries[i].processedByteCount;
         aggregatedCount++;
       }
     }
@@ -189,11 +214,14 @@ private:
     
     for (size_t i = 0; i < aggregatedCount; ++i) {
       double pct = totalTime > 0 ? (double)aggregated[i].totalExclusiveCycles / (double)totalTime * 100.0 : 0.0;
-      printf("  %s: %llu cycles (%.2f%%) [%llu hits]\n",
+      printf("  %s: %llu cycles (%.2f%%) [%llu hits]",
              aggregated[i].label,
              (unsigned long long)aggregated[i].totalExclusiveCycles,
              pct,
              (unsigned long long)aggregated[i].totalHits);
+      
+      printThroughput(aggregated[i].totalProcessedBytes);
+      printf("\n");
     }
   }
 };
@@ -206,15 +234,19 @@ inline void EndAndPrintProfile() {
   GlobalProfiler::instance().printResults();
 }
 
-// RAII-based scope timer with nesting support
+// RAII-based scope timer with optional bandwidth tracking
 struct ScopedTimer {
   int entryIndex;
   u64 startCycles;
+  u64 byteCount;
   
-  ScopedTimer(const char* label) : entryIndex(-1), startCycles(0) {
+  ScopedTimer(const char* label, u64 bytes = 0) : entryIndex(-1), startCycles(0), byteCount(bytes) {
     GlobalProfiler& prof = GlobalProfiler::instance();
     entryIndex = prof.addEntry(label);
     prof.pushParent(entryIndex);
+    if (byteCount > 0) {
+      prof.recordBandwidth(entryIndex, byteCount);
+    }
     startCycles = ReadCPUTimer();
   }
   
@@ -230,11 +262,15 @@ struct ScopedTimer {
 // Macro for easy scope timing
 #define TIME_BLOCK(label) ScopedTimer _scoped_timer_##__LINE__(label)
 
+// Macro for scope timing with bandwidth
+#define TIME_BANDWIDTH(label, byteCount) ScopedTimer _scoped_timer_##__LINE__(label, byteCount)
+
 #else
 
 // When profiling is disabled, all macros become no-ops
 inline void BeginProfile() {}
 inline void EndAndPrintProfile() {}
 #define TIME_BLOCK(label) (void)0
+#define TIME_BANDWIDTH(label, byteCount) (void)0
 
 #endif

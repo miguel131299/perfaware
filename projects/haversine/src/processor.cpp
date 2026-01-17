@@ -43,7 +43,6 @@ void HaversineProcessor::parseJSON(const std::string &filename) {
 }
 
 std::string HaversineProcessor::readJSONFile(const std::string &filename) {
-  TIME_BLOCK("ReadJSONFile");
   std::ifstream file(filename, std::ios::binary);
 
   if (!file) {
@@ -53,7 +52,13 @@ std::string HaversineProcessor::readJSONFile(const std::string &filename) {
   // Read entire file into string
   std::string content;
   {
-    TIME_BLOCK("ReadingIntoBuffer");
+    // Get file size for bandwidth tracking
+    file.seekg(0, std::ios::end);
+    std::streampos fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+    u64 fileSizeBytes = fileSize;
+    
+    TIME_BANDWIDTH("ReadingIntoBuffer", fileSizeBytes);
     content = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   }
   return content;
@@ -94,14 +99,13 @@ double HaversineProcessor::readBinaryReference(const std::string &filename) {
 
 void HaversineProcessor::computeDistances() {
   TIME_BLOCK("ComputeDistances");
-  {
-    TIME_BLOCK("ClearDistances");
-    distances.clear();
-    sum = 0.0;
-  }
+  distances.clear();
+  sum = 0.0;
 
   {
-    TIME_BLOCK("LoopAndSum");
+    // Track bandwidth: each pair is 4 doubles (8 bytes each) = 32 bytes
+    u64 pairDataSize = pairs.size() * sizeof(PointPair);
+    TIME_BANDWIDTH("LoopAndSum", pairDataSize);
     for (const auto &pair : pairs) {
       double distance = computeHaversine(pair.p0, pair.p1);
       distances.push_back(distance);
