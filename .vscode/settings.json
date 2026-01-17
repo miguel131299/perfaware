@@ -2,7 +2,7 @@
   "cmake.defaultBuildPreset": "ninja",
   "cmake.configurePreset": "default",
   "[cpp]": {
-    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
     "editor.formatOnSave": true
   },
   "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",

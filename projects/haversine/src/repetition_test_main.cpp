@@ -3,165 +3,264 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
-// Get file size
-static u64 getFileSize(const char* filename) {
-  struct stat st;
-  if (stat(filename, &st) != 0) {
-    fprintf(stderr, "ERROR: Could not stat file %s\n", filename);
-    return 0;
+enum AllocationType {
+  AllocType_None,
+  AllocType_Malloc,
+  AllocType_Count,
+};
+
+struct ReadParameters {
+  const char *filename;
+  u64 fileSize;
+  char *buffer; // Pre-allocated buffer
+  AllocationType allocType;
+};
+
+// Handle memory allocation based on allocation type
+static void handleAllocation(ReadParameters *params, char **buffer) {
+  switch (params->allocType) {
+  case AllocType_None: {
+    // Use pre-allocated buffer, don't allocate
+  } break;
+
+  case AllocType_Malloc: {
+    *buffer = (char *)malloc(params->fileSize);
+    if (!*buffer) {
+      fprintf(stderr, "ERROR: Could not allocate buffer\n");
+    }
+  } break;
+
+  default: {
+    fprintf(stderr, "ERROR: Unrecognized allocation type\n");
+  } break;
   }
-  return st.st_size;
+}
+
+// Handle memory deallocation
+static void handleDeallocation(ReadParameters *params, char **buffer) {
+  switch (params->allocType) {
+  case AllocType_None: {
+    // Nothing to deallocate
+  } break;
+
+  case AllocType_Malloc: {
+    if (*buffer) {
+      free(*buffer);
+      *buffer = nullptr;
+    }
+  } break;
+
+  default: {
+    fprintf(stderr, "ERROR: Unrecognized allocation type\n");
+  } break;
+  }
 }
 
 // Test 1: fread (standard C library)
-static void testFread(const char* filename, u64 fileSize) {
-  printf("\n=== Testing fread ===\n");
-  
+static void testFread(ReadParameters *params) {
+  printf("\n=== Testing fread (AllocType: %s) ===\n",
+         params->allocType == AllocType_Malloc ? "Malloc" : "None");
+
   RepetitionTester tester;
-  tester.newTestWave(fileSize, 10000);  // Try for 10 seconds
-  
+  tester.newTestWave(params->fileSize, 10000); // Try for 10 seconds
+
   REPETITION_TEST_BEGIN(tester) {
-    FILE* f = fopen(filename, "rb");
+    FILE *f = fopen(params->filename, "rb");
     if (!f) {
-      fprintf(stderr, "ERROR: Could not open %s\n", filename);
+      fprintf(stderr, "ERROR: Could not open %s\n", params->filename);
       break;
     }
-    
-    // Allocate buffer for reading
-    char* buffer = (char*)malloc(fileSize);
+
+    char *buffer = params->buffer;
+    handleAllocation(params, &buffer);
+
     if (!buffer) {
-      fprintf(stderr, "ERROR: Could not allocate buffer\n");
       fclose(f);
       break;
     }
-    
+
     REPETITION_TEST_START_TIMING(tester);
-    size_t bytesRead = fread(buffer, 1, fileSize, f);
+    size_t bytesRead = fread(buffer, 1, params->fileSize, f);
     REPETITION_TEST_END_TIMING(tester);
-    
-    if (bytesRead != fileSize) {
-      fprintf(stderr, "ERROR: fread returned %zu bytes, expected %llu\n", bytesRead, (unsigned long long)fileSize);
+
+    if (bytesRead != params->fileSize) {
+      fprintf(stderr, "ERROR: fread returned %zu bytes, expected %llu\n",
+              bytesRead, (unsigned long long)params->fileSize);
       tester.testMode = RepetitionTester::Error;
     }
-    
+
     REPETITION_TEST_COUNT_BYTES(tester, bytesRead);
-    
-    free(buffer);
+
+    handleDeallocation(params, &buffer);
     fclose(f);
   }
 }
 
 // Test 2: read (POSIX syscall)
-static void testRead(const char* filename, u64 fileSize) {
-  printf("\n=== Testing read (POSIX syscall) ===\n");
-  
+static void testRead(ReadParameters *params) {
+  printf("\n=== Testing read (POSIX syscall, AllocType: %s) ===\n",
+         params->allocType == AllocType_Malloc ? "Malloc" : "None");
+
   RepetitionTester tester;
-  tester.newTestWave(fileSize, 10000);  // Try for 10 seconds
-  
+  tester.newTestWave(params->fileSize, 10000); // Try for 10 seconds
+
   REPETITION_TEST_BEGIN(tester) {
-    int fd = open(filename, O_RDONLY);
+    int fd = open(params->filename, O_RDONLY);
     if (fd < 0) {
-      fprintf(stderr, "ERROR: Could not open %s\n", filename);
+      fprintf(stderr, "ERROR: Could not open %s\n", params->filename);
       break;
     }
-    
-    // Allocate buffer for reading
-    char* buffer = (char*)malloc(fileSize);
+
+    char *buffer = params->buffer;
+    handleAllocation(params, &buffer);
+
     if (!buffer) {
-      fprintf(stderr, "ERROR: Could not allocate buffer\n");
       close(fd);
       break;
     }
-    
+
     REPETITION_TEST_START_TIMING(tester);
-    ssize_t bytesRead = read(fd, buffer, fileSize);
+    ssize_t bytesRead = read(fd, buffer, params->fileSize);
     REPETITION_TEST_END_TIMING(tester);
-    
-    if (bytesRead != (ssize_t)fileSize) {
-      fprintf(stderr, "ERROR: read returned %zd bytes, expected %llu\n", bytesRead, (unsigned long long)fileSize);
+
+    if (bytesRead != (ssize_t)params->fileSize) {
+      fprintf(stderr, "ERROR: read returned %zd bytes, expected %llu\n",
+              bytesRead, (unsigned long long)params->fileSize);
       tester.testMode = RepetitionTester::Error;
     }
-    
+
     REPETITION_TEST_COUNT_BYTES(tester, (u64)bytesRead);
-    
-    free(buffer);
+
+    handleDeallocation(params, &buffer);
     close(fd);
   }
 }
 
 // Test 3: fread with smaller buffer (simulating chunked read)
-static void testFreadChunked(const char* filename, u64 fileSize) {
-  printf("\n=== Testing fread (64KB chunks) ===\n");
-  
+static void testFreadChunked(ReadParameters *params) {
+  printf("\n=== Testing fread (64KB chunks, AllocType: %s) ===\n",
+         params->allocType == AllocType_Malloc ? "Malloc" : "None");
+
   RepetitionTester tester;
-  tester.newTestWave(fileSize, 10000);  // Try for 10 seconds
-  
-  const u64 CHUNK_SIZE = 64 * 1024;  // 64KB chunks
-  
+  tester.newTestWave(params->fileSize, 10000); // Try for 10 seconds
+
+  const u64 CHUNK_SIZE = 64 * 1024; // 64KB chunks
+
   REPETITION_TEST_BEGIN(tester) {
-    FILE* f = fopen(filename, "rb");
+    FILE *f = fopen(params->filename, "rb");
     if (!f) {
-      fprintf(stderr, "ERROR: Could not open %s\n", filename);
+      fprintf(stderr, "ERROR: Could not open %s\n", params->filename);
       break;
     }
-    
-    char* buffer = (char*)malloc(CHUNK_SIZE);
+
+    char *buffer = params->buffer;
+    handleAllocation(params, &buffer);
+
     if (!buffer) {
-      fprintf(stderr, "ERROR: Could not allocate buffer\n");
       fclose(f);
       break;
     }
-    
+
     u64 totalBytesRead = 0;
-    
+
     REPETITION_TEST_START_TIMING(tester);
-    while (totalBytesRead < fileSize) {
-      u64 toRead = (fileSize - totalBytesRead < CHUNK_SIZE) ? (fileSize - totalBytesRead) : CHUNK_SIZE;
+    while (totalBytesRead < params->fileSize) {
+      u64 toRead = (params->fileSize - totalBytesRead < CHUNK_SIZE)
+                       ? (params->fileSize - totalBytesRead)
+                       : CHUNK_SIZE;
       size_t bytesRead = fread(buffer, 1, toRead, f);
-      if (bytesRead == 0) break;
+      if (bytesRead == 0)
+        break;
       totalBytesRead += bytesRead;
     }
     REPETITION_TEST_END_TIMING(tester);
-    
-    if (totalBytesRead != fileSize) {
-      fprintf(stderr, "ERROR: fread chunked returned %llu bytes, expected %llu\n", 
-              (unsigned long long)totalBytesRead, (unsigned long long)fileSize);
+
+    if (totalBytesRead != params->fileSize) {
+      fprintf(stderr,
+              "ERROR: fread chunked returned %llu bytes, expected %llu\n",
+              (unsigned long long)totalBytesRead,
+              (unsigned long long)params->fileSize);
       tester.testMode = RepetitionTester::Error;
     }
-    
+
     REPETITION_TEST_COUNT_BYTES(tester, totalBytesRead);
-    
-    free(buffer);
+
+    handleDeallocation(params, &buffer);
     fclose(f);
   }
 }
 
-int main(int argc, char** argv) {
+// Function pointer type for test functions
+typedef void (*TestFunction)(ReadParameters *);
+
+int main(int argc, char **argv) {
   if (argc < 2) {
     fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
     fprintf(stderr, "  Example: %s data_json_1000000.json\n", argv[0]);
     return 1;
   }
-  
-  const char* filename = argv[1];
-  u64 fileSize = getFileSize(filename);
-  
+
+  const char *filename = argv[1];
+
+  struct stat st;
+  if (stat(filename, &st) != 0) {
+    fprintf(stderr, "ERROR: Could not stat file %s\n", filename);
+    return 1;
+  }
+
+  u64 fileSize = st.st_size;
   if (fileSize == 0) {
     fprintf(stderr, "ERROR: File not found or is empty: %s\n", filename);
     return 1;
   }
-  
-  printf("Testing file: %s (%llu bytes)\n", filename, (unsigned long long)fileSize);
-  
-  // Run all tests
-  testFread(filename, fileSize);
-  testRead(filename, fileSize);
-  testFreadChunked(filename, fileSize);
-  
-  printf("\nAll tests completed.\n");
+
+  printf("Testing file: %s (%llu bytes)\n", filename,
+         (unsigned long long)fileSize);
+  printf("========================================\n\n");
+
+  AllocationType allocTypes[2] = {AllocType_None, AllocType_Malloc};
+
+  // Array of test functions
+  TestFunction tests[] = {testFread, testRead, testFreadChunked};
+  const int testsCount = 3;
+
+  while (true) {
+
+    // Run each test with both allocation types
+    for (int testIdx = 0; testIdx < testsCount; ++testIdx) {
+      for (int typeIdx = 0; typeIdx < 2; ++typeIdx) {
+        AllocationType allocType = allocTypes[typeIdx];
+
+        // Allocate buffer once for AllocType_None (reused across tests)
+        char *buffer = nullptr;
+        if (allocType == AllocType_None) {
+          buffer = (char *)malloc(fileSize);
+          if (!buffer) {
+            fprintf(stderr,
+                    "ERROR: Could not allocate buffer for AllocType_None\n");
+            return 1;
+          }
+        }
+
+        ReadParameters params = {filename, fileSize, buffer, allocType};
+
+        // Run the test
+        tests[testIdx](&params);
+
+        // Clean up buffer for this allocation type
+        if (allocType == AllocType_None && buffer) {
+          free(buffer);
+        }
+
+        printf("\n");
+      }
+    }
+  }
+
+  printf("All tests completed.\n");
   return 0;
 }
