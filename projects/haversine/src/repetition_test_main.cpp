@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+typedef int64_t i64;
+
 enum AllocationType {
   AllocType_None,
   AllocType_Malloc,
@@ -223,6 +225,34 @@ static void testWriteToAllBytes(ReadParameters *params) {
   }
 }
 
+// Test 5: Write to all bytes backward (reverse order write performance)
+static void testWriteToAllBytesBackward(ReadParameters *params) {
+  printf("\n=== Testing write to all bytes backward (AllocType: %s) ===\n",
+         params->allocType == AllocType_Malloc ? "Malloc" : "None");
+
+  RepetitionTester tester;
+  tester.newTestWave(params->fileSize, params->testTimeMs);
+
+  REPETITION_TEST_BEGIN(tester) {
+    char *buffer = params->buffer;
+    handleAllocation(params, &buffer);
+
+    if (!buffer) {
+      break;
+    }
+
+    REPETITION_TEST_START_TIMING(tester);
+    for (i64 index = (i64)params->fileSize - 1; index >= 0; --index) {
+      buffer[index] = (char)(index & 0xFF);
+    }
+    REPETITION_TEST_END_TIMING(tester);
+
+    REPETITION_TEST_COUNT_BYTES(tester, params->fileSize);
+
+    handleDeallocation(params, &buffer);
+  }
+}
+
 // Function pointer type for test functions
 typedef void (*TestFunction)(ReadParameters *);
 
@@ -266,8 +296,9 @@ int main(int argc, char **argv) {
   AllocationType allocTypes[2] = {AllocType_None, AllocType_Malloc};
 
   // Array of test functions
-  TestFunction tests[] = {testFread, testRead, testFreadChunked, testWriteToAllBytes};
-  const int testsCount = 4;
+  TestFunction tests[] = {testFread, testRead, testFreadChunked,
+                          testWriteToAllBytes, testWriteToAllBytesBackward};
+  const int testsCount = 5;
 
   while (true) {
 
