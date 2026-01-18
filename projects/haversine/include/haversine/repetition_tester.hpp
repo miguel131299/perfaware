@@ -1,8 +1,8 @@
 #pragma once
 
 #include "haversine/platform_metrics.hpp"
+#include "haversine/types.hpp"
 
-#include <cstdint>
 #include <cstdio>
 #include <climits>
 

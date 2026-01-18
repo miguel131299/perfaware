@@ -1,4 +1,5 @@
 #include "haversine/repetition_tester.hpp"
+#include "haversine/types.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -6,8 +7,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-typedef int64_t i64;
 
 enum AllocationType {
   AllocType_None,
@@ -296,9 +295,8 @@ int main(int argc, char **argv) {
   AllocationType allocTypes[2] = {AllocType_None, AllocType_Malloc};
 
   // Array of test functions
-  TestFunction tests[] = {testFread, testRead, testFreadChunked,
-                          testWriteToAllBytes, testWriteToAllBytesBackward};
-  const int testsCount = 5;
+  TestFunction tests[] = {testWriteToAllBytes, testWriteToAllBytesBackward};
+  const int testsCount = 2;
 
   while (true) {
 

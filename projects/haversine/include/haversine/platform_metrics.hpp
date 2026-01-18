@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstdint>
-
-typedef uint64_t u64;
+#include "haversine/types.hpp"
 
 #if _WIN32
 

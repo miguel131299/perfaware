@@ -1,4 +1,5 @@
 #include "haversine/platform_metrics.hpp"
+#include "haversine/types.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -10,8 +11,6 @@
   #include <sys/mman.h>
   #include <unistd.h>
 #endif
-
-typedef int64_t i64;
 
 // Constants for the test
 const u64 PAGE_SIZE = 4096;
