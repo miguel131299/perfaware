@@ -35,16 +35,16 @@ if(NOT ENABLE_PROFILING)
 endif()
 
 # Repetition tester executable
-add_executable(repetition_tester ${CMAKE_CURRENT_SOURCE_DIR}/src/repetition_test_main.cpp)
+add_executable(repetition_tester ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/repetition_test_main.cpp)
 target_include_directories(repetition_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # Page fault test executable
-add_executable(page_fault_tester ${CMAKE_CURRENT_SOURCE_DIR}/src/page_fault_test_main.cpp)
+add_executable(page_fault_tester ${CMAKE_CURRENT_SOURCE_DIR}/src/page_faults/page_fault_test_main.cpp)
 target_include_directories(page_fault_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Pointer analysis executable
-add_executable(pointer_analyzer ${CMAKE_CURRENT_SOURCE_DIR}/src/pointer_analysis_main.cpp)
+add_executable(pointer_analyzer ${CMAKE_CURRENT_SOURCE_DIR}/src/page_faults/pointer_analysis_main.cpp)
 target_include_directories(pointer_analyzer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Page fault analysis executable
-add_executable(page_fault_analysis ${CMAKE_CURRENT_SOURCE_DIR}/src/page_fault_analysis.cpp)
+add_executable(page_fault_analysis ${CMAKE_CURRENT_SOURCE_DIR}/src/page_faults/page_fault_analysis.cpp)
 target_include_directories(page_fault_analysis PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -1,16 +1,19 @@
 #include "haversine/repetition_tester.hpp"
 #include "haversine/types.hpp"
 
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 enum AllocationType {
   AllocType_None,
   AllocType_Malloc,
+  AllocType_HugePages,
   AllocType_Count,
 };
 
@@ -20,6 +23,8 @@ struct ReadParameters {
   char *buffer; // Pre-allocated buffer
   AllocationType allocType;
   u64 testTimeMs; // Test duration in milliseconds
+  void *mmapHandle; // For mmap allocations (tracking for munmap)
+  u64 mmapSize;     // Actual size mapped (may be rounded up for huge pages)
 };
 
 // Handle memory allocation based on allocation type
@@ -34,6 +39,38 @@ static void handleAllocation(ReadParameters *params, char **buffer) {
     if (!*buffer) {
       fprintf(stderr, "ERROR: Could not allocate buffer\n");
     }
+  } break;
+
+  case AllocType_HugePages: {
+#ifdef MAP_HUGETLB
+    // Allocate using huge pages (2MB pages on most systems)
+    // Round up size to huge page boundary (2MB = 2097152 bytes)
+    const u64 HUGE_PAGE_SIZE = 2 * 1024 * 1024; // 2MB
+    u64 allocSize = ((params->fileSize + HUGE_PAGE_SIZE - 1) / HUGE_PAGE_SIZE) * HUGE_PAGE_SIZE;
+    
+    *buffer = (char *)mmap(nullptr, allocSize,
+                           PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+    if (*buffer == MAP_FAILED) {
+      fprintf(stderr, "ERROR: Could not allocate huge pages (size: %llu MB). "
+                      "Make sure huge pages are enabled:\n", 
+                      (unsigned long long)(allocSize / (1024 * 1024)));
+      fprintf(stderr, "  Run: sudo sh -c 'echo %llu > /proc/sys/vm/nr_hugepages'\n",
+                      (unsigned long long)((allocSize / HUGE_PAGE_SIZE) + 10));
+      fprintf(stderr, "  Check: cat /proc/meminfo | grep HugePages\n");
+      *buffer = nullptr;
+      params->mmapHandle = nullptr;
+      params->mmapSize = 0;
+    } else {
+      params->mmapHandle = *buffer;
+      params->mmapSize = allocSize;
+    }
+#else
+    fprintf(stderr, "ERROR: Huge pages not supported on this platform\n");
+    *buffer = nullptr;
+    params->mmapHandle = nullptr;
+    params->mmapSize = 0;
+#endif
   } break;
 
   default: {
@@ -56,6 +93,17 @@ static void handleDeallocation(ReadParameters *params, char **buffer) {
     }
   } break;
 
+  case AllocType_HugePages: {
+    if (params->mmapHandle != nullptr && params->mmapSize > 0) {
+      if (munmap(params->mmapHandle, params->mmapSize) != 0) {
+        fprintf(stderr, "WARNING: Failed to munmap huge pages (errno: %d)\n", errno);
+      }
+      *buffer = nullptr;
+      params->mmapHandle = nullptr;
+      params->mmapSize = 0;
+    }
+  } break;
+
   default: {
     fprintf(stderr, "ERROR: Unrecognized allocation type\n");
   } break;
@@ -65,7 +113,9 @@ static void handleDeallocation(ReadParameters *params, char **buffer) {
 // Test 1: fread (standard C library)
 static void testFread(ReadParameters *params) {
   printf("\n=== Testing fread (AllocType: %s) ===\n",
-         params->allocType == AllocType_Malloc ? "Malloc" : "None");
+         params->allocType == AllocType_Malloc ? "Malloc" :
+         params->allocType == AllocType_HugePages ? "HugePages" :
+         "None");
 
   RepetitionTester tester;
   tester.newTestWave(params->fileSize, params->testTimeMs);
@@ -105,7 +155,9 @@ static void testFread(ReadParameters *params) {
 // Test 2: read (POSIX syscall)
 static void testRead(ReadParameters *params) {
   printf("\n=== Testing read (POSIX syscall, AllocType: %s) ===\n",
-         params->allocType == AllocType_Malloc ? "Malloc" : "None");
+         params->allocType == AllocType_Malloc ? "Malloc" :
+         params->allocType == AllocType_HugePages ? "HugePages" :
+         "None");
 
   RepetitionTester tester;
   tester.newTestWave(params->fileSize, params->testTimeMs);
@@ -145,7 +197,9 @@ static void testRead(ReadParameters *params) {
 // Test 3: fread with smaller buffer (simulating chunked read)
 static void testFreadChunked(ReadParameters *params) {
   printf("\n=== Testing fread (64KB chunks, AllocType: %s) ===\n",
-         params->allocType == AllocType_Malloc ? "Malloc" : "None");
+         params->allocType == AllocType_Malloc ? "Malloc" :
+         params->allocType == AllocType_HugePages ? "HugePages" :
+         "None");
 
   RepetitionTester tester;
   tester.newTestWave(params->fileSize, params->testTimeMs);
@@ -199,7 +253,9 @@ static void testFreadChunked(ReadParameters *params) {
 // Test 4: Write to all bytes (memory write performance, first-touch behavior)
 static void testWriteToAllBytes(ReadParameters *params) {
   printf("\n=== Testing write to all bytes (AllocType: %s) ===\n",
-         params->allocType == AllocType_Malloc ? "Malloc" : "None");
+         params->allocType == AllocType_Malloc ? "Malloc" :
+         params->allocType == AllocType_HugePages ? "HugePages" :
+         "None");
 
   RepetitionTester tester;
   tester.newTestWave(params->fileSize, params->testTimeMs);
@@ -227,7 +283,9 @@ static void testWriteToAllBytes(ReadParameters *params) {
 // Test 5: Write to all bytes backward (reverse order write performance)
 static void testWriteToAllBytesBackward(ReadParameters *params) {
   printf("\n=== Testing write to all bytes backward (AllocType: %s) ===\n",
-         params->allocType == AllocType_Malloc ? "Malloc" : "None");
+         params->allocType == AllocType_Malloc ? "Malloc" :
+         params->allocType == AllocType_HugePages ? "HugePages" :
+         "None");
 
   RepetitionTester tester;
   tester.newTestWave(params->fileSize, params->testTimeMs);
@@ -292,17 +350,19 @@ int main(int argc, char **argv) {
          (unsigned long long)fileSize);
   printf("========================================\n\n");
 
-  AllocationType allocTypes[2] = {AllocType_None, AllocType_Malloc};
+  AllocationType allocTypes[3] = {AllocType_None, AllocType_Malloc,
+                                   AllocType_HugePages};
 
   // Array of test functions
-  TestFunction tests[] = {testWriteToAllBytes, testWriteToAllBytesBackward};
-  const int testsCount = 2;
+  TestFunction tests[] = {testFread, testRead, testFreadChunked,
+                          testWriteToAllBytes, testWriteToAllBytesBackward};
+  const int testsCount = 5;
 
   while (true) {
 
-    // Run each test with both allocation types
+    // Run each test with all allocation types
     for (int testIdx = 0; testIdx < testsCount; ++testIdx) {
-      for (int typeIdx = 0; typeIdx < 2; ++typeIdx) {
+      for (int typeIdx = 0; typeIdx < 3; ++typeIdx) {
         AllocationType allocType = allocTypes[typeIdx];
 
         // Allocate buffer once for AllocType_None (reused across tests)
@@ -317,7 +377,7 @@ int main(int argc, char **argv) {
         }
 
         ReadParameters params = {filename, fileSize, buffer, allocType,
-                                 testTimeMs};
+                                 testTimeMs, nullptr, 0};
 
         // Run the test
         tests[testIdx](&params);
