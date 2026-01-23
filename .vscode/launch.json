@@ -37,8 +37,23 @@
       "request": "launch",
       "name": "Debug Haversine Processor",
       "program": "${workspaceFolder}/build/projects/haversine/haversine_processor",
-      "args": ["${workspaceFolder}/build/projects/haversine/data_json_1000000.json", "${workspaceFolder}/build/projects/haversine/data_bin_1000000.f64", "-p"],
+      "args": [
+        "${workspaceFolder}/build/projects/haversine/data_json_1000000.json",
+        "${workspaceFolder}/build/projects/haversine/data_bin_1000000.f64",
+        "-p"
+      ],
       "cwd": "${workspaceFolder}/build/projects/haversine"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Repetition Tester",
+      "program": "${workspaceFolder}/repetition_tester",
+      "args": ["${workspaceFolder}/build/projects/haversine/data_1000000.json"],
+      "cwd": "${workspaceFolder}/build/projects/haversine",
+      "initCommands": [
+        "settings set target.x86-disassembly-flavor intel"
+      ]
     }
   ]
 }
