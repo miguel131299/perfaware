@@ -37,6 +37,25 @@ endif()
 # Repetition tester executable
 add_executable(repetition_tester ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/repetition_test_main.cpp)
 target_include_directories(repetition_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Frontend test executable (with ASM)
+set(ASM_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/nop_loop.asm)
+set(ASM_OBJECT ${CMAKE_CURRENT_BINARY_DIR}/nop_loop.o)
+
+# Custom command to assemble the .asm file with NASM
+add_custom_command(
+  OUTPUT ${ASM_OBJECT}
+  COMMAND nasm -f elf64 ${ASM_SOURCE} -o ${ASM_OBJECT}
+  DEPENDS ${ASM_SOURCE}
+  COMMENT "Assembling nop_loop.asm with NASM"
+)
+
+add_executable(frontend_tester 
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/frontend_test_main.cpp
+  ${ASM_OBJECT}
+)
+target_include_directories(frontend_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 # Page fault test executable
 add_executable(page_fault_tester ${CMAKE_CURRENT_SOURCE_DIR}/src/page_faults/page_fault_test_main.cpp)
 target_include_directories(page_fault_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

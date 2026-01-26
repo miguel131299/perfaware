@@ -1,117 +1,12 @@
 #include "haversine/repetition_tester.hpp"
-#include "haversine/types.hpp"
+#include "haversine/test_helpers.hpp"
 
-#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-enum AllocationType {
-  AllocType_None,
-  AllocType_Malloc,
-  AllocType_HugePages,
-  AllocType_Count,
-};
-
-struct ReadParameters {
-  const char *filename;
-  u64 fileSize;
-  char *buffer; // Pre-allocated buffer
-  AllocationType allocType;
-  u64 testTimeMs;   // Test duration in milliseconds
-  void *mmapHandle; // For mmap allocations (tracking for munmap)
-  u64 mmapSize;     // Actual size mapped (may be rounded up for huge pages)
-};
-
-// Handle memory allocation based on allocation type
-static void handleAllocation(ReadParameters *params, char **buffer) {
-  switch (params->allocType) {
-  case AllocType_None: {
-    // Use pre-allocated buffer, don't allocate
-  } break;
-
-  case AllocType_Malloc: {
-    *buffer = (char *)malloc(params->fileSize);
-    if (!*buffer) {
-      fprintf(stderr, "ERROR: Could not allocate buffer\n");
-    }
-  } break;
-
-  case AllocType_HugePages: {
-#ifdef MAP_HUGETLB
-    // Allocate using huge pages (2MB pages on most systems)
-    // Round up size to huge page boundary (2MB = 2097152 bytes)
-    const u64 HUGE_PAGE_SIZE = 2 * 1024 * 1024; // 2MB
-    u64 allocSize = ((params->fileSize + HUGE_PAGE_SIZE - 1) / HUGE_PAGE_SIZE) *
-                    HUGE_PAGE_SIZE;
-
-    *buffer = (char *)mmap(nullptr, allocSize, PROT_READ | PROT_WRITE,
-                           MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
-    if (*buffer == MAP_FAILED) {
-      fprintf(stderr,
-              "ERROR: Could not allocate huge pages (size: %llu MB). "
-              "Make sure huge pages are enabled:\n",
-              (unsigned long long)(allocSize / (1024 * 1024)));
-      fprintf(stderr,
-              "  Run: sudo sh -c 'echo %llu > /proc/sys/vm/nr_hugepages'\n",
-              (unsigned long long)((allocSize / HUGE_PAGE_SIZE) + 10));
-      fprintf(stderr, "  Check: cat /proc/meminfo | grep HugePages\n");
-      *buffer = nullptr;
-      params->mmapHandle = nullptr;
-      params->mmapSize = 0;
-    } else {
-      params->mmapHandle = *buffer;
-      params->mmapSize = allocSize;
-    }
-#else
-    fprintf(stderr, "ERROR: Huge pages not supported on this platform\n");
-    *buffer = nullptr;
-    params->mmapHandle = nullptr;
-    params->mmapSize = 0;
-#endif
-  } break;
-
-  default: {
-    fprintf(stderr, "ERROR: Unrecognized allocation type\n");
-  } break;
-  }
-}
-
-// Handle memory deallocation
-static void handleDeallocation(ReadParameters *params, char **buffer) {
-  switch (params->allocType) {
-  case AllocType_None: {
-    // Nothing to deallocate
-  } break;
-
-  case AllocType_Malloc: {
-    if (*buffer) {
-      free(*buffer);
-      *buffer = nullptr;
-    }
-  } break;
-
-  case AllocType_HugePages: {
-    if (params->mmapHandle != nullptr && params->mmapSize > 0) {
-      if (munmap(params->mmapHandle, params->mmapSize) != 0) {
-        fprintf(stderr, "WARNING: Failed to munmap huge pages (errno: %d)\n",
-                errno);
-      }
-      *buffer = nullptr;
-      params->mmapHandle = nullptr;
-      params->mmapSize = 0;
-    }
-  } break;
-
-  default: {
-    fprintf(stderr, "ERROR: Unrecognized allocation type\n");
-  } break;
-  }
-}
 
 // Test 1: fread (standard C library)
 static void testFread(ReadParameters *params) {
@@ -139,12 +34,12 @@ static void testFread(ReadParameters *params) {
     }
 
     REPETITION_TEST_START_TIMING(tester);
-    size_t bytesRead = fread(buffer, 1, params->fileSize, f);
+    size_t bytesRead = fread(buffer, 1, params->bufferSize, f);
     REPETITION_TEST_END_TIMING(tester);
 
-    if (bytesRead != params->fileSize) {
+    if (bytesRead != params->bufferSize) {
       fprintf(stderr, "ERROR: fread returned %zu bytes, expected %llu\n",
-              bytesRead, (unsigned long long)params->fileSize);
+              bytesRead, (unsigned long long)params->bufferSize);
       tester.testMode = RepetitionTester::Error;
     }
 
@@ -181,12 +76,12 @@ static void testRead(ReadParameters *params) {
     }
 
     REPETITION_TEST_START_TIMING(tester);
-    ssize_t bytesRead = read(fd, buffer, params->fileSize);
+    ssize_t bytesRead = read(fd, buffer, params->bufferSize);
     REPETITION_TEST_END_TIMING(tester);
 
-    if (bytesRead != (ssize_t)params->fileSize) {
+    if (bytesRead != (ssize_t)params->bufferSize) {
       fprintf(stderr, "ERROR: read returned %zd bytes, expected %llu\n",
-              bytesRead, (unsigned long long)params->fileSize);
+              bytesRead, (unsigned long long)params->bufferSize);
       tester.testMode = RepetitionTester::Error;
     }
 
@@ -227,9 +122,9 @@ static void testFreadChunked(ReadParameters *params) {
     u64 totalBytesRead = 0;
 
     REPETITION_TEST_START_TIMING(tester);
-    while (totalBytesRead < params->fileSize) {
-      u64 toRead = (params->fileSize - totalBytesRead < CHUNK_SIZE)
-                       ? (params->fileSize - totalBytesRead)
+    while (totalBytesRead < params->bufferSize) {
+      u64 toRead = (params->bufferSize - totalBytesRead < CHUNK_SIZE)
+                       ? (params->bufferSize - totalBytesRead)
                        : CHUNK_SIZE;
       size_t bytesRead = fread(buffer, 1, toRead, f);
       if (bytesRead == 0)
@@ -238,11 +133,11 @@ static void testFreadChunked(ReadParameters *params) {
     }
     REPETITION_TEST_END_TIMING(tester);
 
-    if (totalBytesRead != params->fileSize) {
+    if (totalBytesRead != params->bufferSize) {
       fprintf(stderr,
               "ERROR: fread chunked returned %llu bytes, expected %llu\n",
               (unsigned long long)totalBytesRead,
-              (unsigned long long)params->fileSize);
+              (unsigned long long)params->bufferSize);
       tester.testMode = RepetitionTester::Error;
     }
 
@@ -275,12 +170,12 @@ static void testWriteToAllBytes(ReadParameters *params) {
     // with clang-18 x64, on -O1, this loops takes 13 bytes
     // CPU Frequency / Bandwith: Cycles per loop instance:
     // (2.7×10^9)÷(1.39×1024^3) = 1.81 cycles
-    for (u64 index = 0; index < params->fileSize; ++index) {
+    for (u64 index = 0; index < params->bufferSize; ++index) {
       buffer[index] = (char)index;
     }
     REPETITION_TEST_END_TIMING(tester);
 
-    REPETITION_TEST_COUNT_BYTES(tester, params->fileSize);
+    REPETITION_TEST_COUNT_BYTES(tester, params->bufferSize);
 
     handleDeallocation(params, &buffer);
   }
@@ -294,7 +189,7 @@ static void testWriteToAllBytesBackward(ReadParameters *params) {
                                                     : "None");
 
   RepetitionTester tester;
-  tester.newTestWave(params->fileSize, params->testTimeMs);
+  tester.newTestWave(params->bufferSize, params->testTimeMs);
 
   REPETITION_TEST_BEGIN(tester) {
     char *buffer = params->buffer;
@@ -305,12 +200,12 @@ static void testWriteToAllBytesBackward(ReadParameters *params) {
     }
 
     REPETITION_TEST_START_TIMING(tester);
-    for (i64 index = (i64)params->fileSize - 1; index >= 0; --index) {
+    for (i64 index = (i64)params->bufferSize - 1; index >= 0; --index) {
       buffer[index] = (char)(index & 0xFF);
     }
     REPETITION_TEST_END_TIMING(tester);
 
-    REPETITION_TEST_COUNT_BYTES(tester, params->fileSize);
+    REPETITION_TEST_COUNT_BYTES(tester, params->bufferSize);
 
     handleDeallocation(params, &buffer);
   }
@@ -321,7 +216,7 @@ static void testMmapAndTouchPages(ReadParameters *params) {
   printf("\n=== Testing mmap file and touch every page ===\n");
 
   RepetitionTester tester;
-  tester.newTestWave(params->fileSize, params->testTimeMs);
+  tester.newTestWave(params->bufferSize, params->testTimeMs);
 
   const u64 PAGE_SIZE = 4096; // Standard 4KB page size
 
@@ -336,7 +231,7 @@ static void testMmapAndTouchPages(ReadParameters *params) {
 
     // Memory map the file
     char *mapped =
-        (char *)mmap(nullptr, params->fileSize, PROT_READ, MAP_PRIVATE, fd, 0);
+        (char *)mmap(nullptr, params->bufferSize, PROT_READ, MAP_PRIVATE, fd, 0);
 
     if (mapped == MAP_FAILED) {
       fprintf(stderr, "ERROR: Could not mmap file\n");
@@ -347,20 +242,20 @@ static void testMmapAndTouchPages(ReadParameters *params) {
 
     // Touch every page to force page faults
     volatile char touchResult = 0;
-    for (u64 offset = 0; offset < params->fileSize; offset += PAGE_SIZE) {
+    for (u64 offset = 0; offset < params->bufferSize; offset += PAGE_SIZE) {
       touchResult += mapped[offset];
     }
     // Touch the last byte if file size is not page-aligned
-    if (params->fileSize % PAGE_SIZE != 0) {
-      touchResult += mapped[params->fileSize - 1];
+    if (params->bufferSize % PAGE_SIZE != 0) {
+      touchResult += mapped[params->bufferSize - 1];
     }
 
     REPETITION_TEST_END_TIMING(tester);
 
-    REPETITION_TEST_COUNT_BYTES(tester, params->fileSize);
+    REPETITION_TEST_COUNT_BYTES(tester, params->bufferSize);
 
     // Clean up
-    munmap(mapped, params->fileSize);
+    munmap(mapped, params->bufferSize);
     close(fd);
   }
 }
@@ -435,8 +330,8 @@ int main(int argc, char **argv) {
           }
         }
 
-        ReadParameters params = {filename,   fileSize, buffer, allocType,
-                                 testTimeMs, nullptr,  0};
+        ReadParameters params = {{fileSize, buffer, allocType,
+                                 testTimeMs, nullptr, 0}, filename};
 
         // Run the test
         tests[testIdx](&params);
