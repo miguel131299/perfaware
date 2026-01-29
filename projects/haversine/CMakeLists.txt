@@ -1,3 +1,19 @@
+# Multinop loops test executable (with ASM)
+set(MULTINOP_ASM_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/multinop_loops.asm)
+set(MULTINOP_ASM_OBJECT ${CMAKE_CURRENT_BINARY_DIR}/multinop_loops.o)
+
+add_custom_command(
+  OUTPUT ${MULTINOP_ASM_OBJECT}
+  COMMAND nasm -f elf64 ${MULTINOP_ASM_SOURCE} -o ${MULTINOP_ASM_OBJECT}
+  DEPENDS ${MULTINOP_ASM_SOURCE}
+  COMMENT "Assembling multinop_loops.asm with NASM"
+)
+
+add_executable(multinop_loops_tester
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/multinop_loops_main.cpp
+  ${MULTINOP_ASM_OBJECT}
+)
+target_include_directories(multinop_loops_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # Haversine Project - Haversine distance calculator and data generator
 
 # Option to enable/disable profiling

@@ -51,9 +51,16 @@
       "program": "${workspaceFolder}/repetition_tester",
       "args": ["${workspaceFolder}/build/projects/haversine/data_1000000.json"],
       "cwd": "${workspaceFolder}/build/projects/haversine",
-      "initCommands": [
-        "settings set target.x86-disassembly-flavor intel"
-      ]
+      "initCommands": ["settings set target.x86-disassembly-flavor intel"]
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Frontend Tester",
+      "program": "${workspaceFolder}/build/projects/haversine/frontend_tester",
+      "args": ["${workspaceFolder}/build/projects/haversine/data_1000000.json"],
+      "cwd": "${workspaceFolder}/build/projects/haversine",
+      "initCommands": ["settings set target.x86-disassembly-flavor intel"]
     }
   ]
 }
