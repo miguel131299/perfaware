@@ -1,3 +1,19 @@
+# Conditional NOP loops test executable (with ASM)
+set(CONDITIONAL_NOP_ASM_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/conditional_nop_loop.asm)
+set(CONDITIONAL_NOP_ASM_OBJECT ${CMAKE_CURRENT_BINARY_DIR}/conditional_nop_loop.o)
+
+add_custom_command(
+  OUTPUT ${CONDITIONAL_NOP_ASM_OBJECT}
+  COMMAND nasm -f elf64 ${CONDITIONAL_NOP_ASM_SOURCE} -o ${CONDITIONAL_NOP_ASM_OBJECT}
+  DEPENDS ${CONDITIONAL_NOP_ASM_SOURCE}
+  COMMENT "Assembling conditional_nop_loop.asm with NASM"
+)
+
+add_executable(conditional_nop_loops_tester
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/conditional_nop_loops_main.cpp
+  ${CONDITIONAL_NOP_ASM_OBJECT}
+)
+target_include_directories(conditional_nop_loops_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # Multinop loops test executable (with ASM)
 set(MULTINOP_ASM_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/multinop_loops.asm)
 set(MULTINOP_ASM_OBJECT ${CMAKE_CURRENT_BINARY_DIR}/multinop_loops.o)

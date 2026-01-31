@@ -1,6 +1,9 @@
 #pragma once
 
 #include "haversine/types.hpp"
+#include <climits>
+#include <fcntl.h>
+#include <unistd.h>
 
 #if _WIN32
 
@@ -97,4 +100,37 @@ inline u64 EstimateCPUFreq(u64 MillisecondsToWait = 100) {
   }
 
   return CPUFreq;
+}
+
+static u64 GetMaxOSRandomCount(void) { return SSIZE_MAX; }
+
+static b32 ReadOSRandomBytes(u64 Count, u8 *Dest) {
+  int fd = open("/dev/urandom", O_RDONLY);
+  if (fd < 0)
+    return 0;
+  while (Count > 0) {
+    ssize_t n = read(fd, Dest, Count);
+    if (n <= 0) {
+      close(fd);
+      return 0;
+    }
+    Dest += n;
+    Count -= n;
+  }
+  close(fd);
+  return 1;
+}
+
+inline void FillWithRandomBytes(u64 Count, u8 *Dest) {
+  u64 MaxRandCount = GetMaxOSRandomCount();
+  u64 AtOffset = 0;
+  while (AtOffset < Count) {
+    u64 ReadCount = Count - AtOffset;
+    if (ReadCount > MaxRandCount) {
+      ReadCount = MaxRandCount;
+    }
+
+    ReadOSRandomBytes(ReadCount, Dest + AtOffset);
+    AtOffset += ReadCount;
+  }
 }
