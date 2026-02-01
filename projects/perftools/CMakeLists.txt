@@ -56,6 +56,23 @@ add_executable(frontend_tester
 )
 target_include_directories(frontend_tester PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
+# Jump alignment test executable (with ASM)
+set(JUMP_ALIGNMENT_ASM_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/jump_alignment.asm)
+set(JUMP_ALIGNMENT_ASM_OBJECT ${CMAKE_CURRENT_BINARY_DIR}/jump_alignment.o)
+
+add_custom_command(
+  OUTPUT ${JUMP_ALIGNMENT_ASM_OBJECT}
+  COMMAND nasm -f elf64 ${JUMP_ALIGNMENT_ASM_SOURCE} -o ${JUMP_ALIGNMENT_ASM_OBJECT}
+  DEPENDS ${JUMP_ALIGNMENT_ASM_SOURCE}
+  COMMENT "Assembling jump_alignment.asm with NASM"
+)
+
+add_executable(jump_alignment_tester
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/jump_alignment_main.cpp
+  ${JUMP_ALIGNMENT_ASM_OBJECT}
+)
+target_include_directories(jump_alignment_tester PRIVATE ${CMAKE_SOURCE_DIR}/include)
+
 # Page fault test executable
 add_executable(page_fault_tester ${CMAKE_CURRENT_SOURCE_DIR}/src/page_faults/page_fault_test_main.cpp)
 target_include_directories(page_fault_tester PRIVATE ${CMAKE_SOURCE_DIR}/include)
