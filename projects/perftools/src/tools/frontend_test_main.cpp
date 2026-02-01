@@ -1,5 +1,5 @@
-#include "haversine/repetition_tester.hpp"
-#include "haversine/test_helpers.hpp"
+#include "common/repetition_tester.hpp"
+#include "common/test_helpers.hpp"
 
 #include <cstdio>
 #include <cstdlib>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "haversine/types.hpp"
+#include "common/types.hpp"
 
 #include <cerrno>
 #include <cstdio>
@@ -45,8 +45,9 @@ static void handleAllocation(BaseTestParameters *params, char **buffer) {
   case AllocType_HugePages: {
 #ifdef MAP_HUGETLB
     const u64 HUGE_PAGE_SIZE = 2 * 1024 * 1024;
-    u64 allocSize = ((params->bufferSize + HUGE_PAGE_SIZE - 1) / HUGE_PAGE_SIZE) *
-                    HUGE_PAGE_SIZE;
+    u64 allocSize =
+        ((params->bufferSize + HUGE_PAGE_SIZE - 1) / HUGE_PAGE_SIZE) *
+        HUGE_PAGE_SIZE;
 
     *buffer = (char *)mmap(nullptr, allocSize, PROT_READ | PROT_WRITE,
                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
@@ -89,7 +90,8 @@ static void handleDeallocation(BaseTestParameters *params, char **buffer) {
   case AllocType_HugePages:
     if (params->mmapHandle != nullptr && params->mmapSize > 0) {
       if (munmap(params->mmapHandle, params->mmapSize) != 0) {
-        fprintf(stderr, "WARNING: Failed to munmap huge pages (errno: %d)\n", errno);
+        fprintf(stderr, "WARNING: Failed to munmap huge pages (errno: %d)\n",
+                errno);
       }
       *buffer = nullptr;
       params->mmapHandle = nullptr;

@@ -1,5 +1,5 @@
 #include "haversine/parser.hpp"
-#include "haversine/profiler.hpp"
+#include "common/profiler.hpp"
 
 #include <cctype>
 #include <istream>

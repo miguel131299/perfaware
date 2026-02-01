@@ -1,11 +1,11 @@
+#include "common/platform_metrics.hpp"
+#include "common/profiler.hpp"
 #include "haversine/processor.hpp"
-#include "haversine/platform_metrics.hpp"
-#include "haversine/profiler.hpp"
 
-#include <cstdlib>
 #include <cstdio>
-#include <iostream>
+#include <cstdlib>
 #include <fstream>
+#include <iostream>
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
@@ -33,9 +33,9 @@ int main(int argc, char *argv[]) {
       TIME_BLOCK("Read");
       jsonContent = processor.readJSONFile(jsonFile);
     }
-    
+
     u64 inputSize = jsonContent.size();
-    
+
     {
       TIME_BLOCK("Parse");
       processor.parseJSONString(jsonContent);

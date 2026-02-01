@@ -1,6 +1,6 @@
 #pragma once
 
-#include "haversine/types.hpp"
+#include "common/types.hpp"
 #include <cstdio>
 
 // ============================================================================

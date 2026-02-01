@@ -1,5 +1,5 @@
 #include "haversine/processor.hpp"
-#include "haversine/profiler.hpp"
+#include "common/profiler.hpp"
 
 #include <cmath>
 #include <cstdio>
@@ -58,9 +58,10 @@ std::string HaversineProcessor::readJSONFile(const std::string &filename) {
     std::streampos fileSize = file.tellg();
     file.seekg(0, std::ios::beg);
     u64 fileSizeBytes = fileSize;
-    
+
     TIME_BANDWIDTH("ReadingIntoBuffer", fileSizeBytes);
-    content = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    content = std::string((std::istreambuf_iterator<char>(file)),
+                          std::istreambuf_iterator<char>());
   }
   return content;
 }
@@ -92,7 +93,8 @@ double HaversineProcessor::readBinaryReference(const std::string &filename) {
   file.seekg(-sizeof(double), std::ios::end);
   double referenceAverage;
   if (!file.read((char *)&referenceAverage, sizeof(double))) {
-    throw std::runtime_error("Failed to read reference average from binary file");
+    throw std::runtime_error(
+        "Failed to read reference average from binary file");
   }
 
   return referenceAverage;

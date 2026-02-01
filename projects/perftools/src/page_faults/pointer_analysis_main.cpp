@@ -1,5 +1,5 @@
-#include "haversine/pointer_decompose.hpp"
-#include "haversine/types.hpp"
+#include "common/pointer_decompose.hpp"
+#include "common/types.hpp"
 
 #include <cstdio>
 #include <cstdlib>

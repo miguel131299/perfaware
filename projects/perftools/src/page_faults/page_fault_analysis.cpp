@@ -1,6 +1,6 @@
-#include "haversine/platform_metrics.hpp"
-#include "haversine/pointer_decompose.hpp"
-#include "haversine/types.hpp"
+#include "common/platform_metrics.hpp"
+#include "common/pointer_decompose.hpp"
+#include "common/types.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -162,7 +162,8 @@ int main(int argc, char **argv) {
 
     // Preallocate results array to avoid I/O during measurement
     const u64 BATCH_SIZE = 1024;
-    FaultResult *results = (FaultResult *)malloc(sizeof(FaultResult) * BATCH_SIZE);
+    FaultResult *results =
+        (FaultResult *)malloc(sizeof(FaultResult) * BATCH_SIZE);
     if (!results) {
       fprintf(stderr, "ERROR: Could not allocate results array\n");
       return 1;
@@ -206,10 +207,11 @@ int main(int argc, char **argv) {
         if (resultIdx >= BATCH_SIZE) {
           for (u64 i = 0; i < resultIdx; ++i) {
             FaultResult *r = &results[i];
-            printf("Page %llu: %lld extra faults (%llu pages since last increase)\n",
-                   (unsigned long long)r->pageCount,
-                   (long long)r->extraFaults,
-                   (i == 0) ? r->pageCount : r->pageCount - results[i - 1].pageCount);
+            printf("Page %llu: %lld extra faults (%llu pages since last "
+                   "increase)\n",
+                   (unsigned long long)r->pageCount, (long long)r->extraFaults,
+                   (i == 0) ? r->pageCount
+                            : r->pageCount - results[i - 1].pageCount);
             printf("    Previous Pointer: | %u|%u|%u|%u|%u|\n",
                    r->prevDecomp.pml4, r->prevDecomp.pdpt, r->prevDecomp.pd,
                    r->prevDecomp.pt, r->prevDecomp.offset);
@@ -229,15 +231,14 @@ int main(int argc, char **argv) {
     for (u64 i = 0; i < resultIdx; ++i) {
       FaultResult *r = &results[i];
       printf("Page %llu: %lld extra faults (%llu pages since last increase)\n",
-             (unsigned long long)r->pageCount,
-             (long long)r->extraFaults,
+             (unsigned long long)r->pageCount, (long long)r->extraFaults,
              (i == 0) ? r->pageCount : r->pageCount - results[i - 1].pageCount);
-      printf("    Previous Pointer: | %u|%u|%u|%u|%u|\n",
-             r->prevDecomp.pml4, r->prevDecomp.pdpt, r->prevDecomp.pd,
-             r->prevDecomp.pt, r->prevDecomp.offset);
-      printf("    This Pointer:     | %u|%u|%u|%u|%u|\n",
-             r->currDecomp.pml4, r->currDecomp.pdpt, r->currDecomp.pd,
-             r->currDecomp.pt, r->currDecomp.offset);
+      printf("    Previous Pointer: | %u|%u|%u|%u|%u|\n", r->prevDecomp.pml4,
+             r->prevDecomp.pdpt, r->prevDecomp.pd, r->prevDecomp.pt,
+             r->prevDecomp.offset);
+      printf("    This Pointer:     | %u|%u|%u|%u|%u|\n", r->currDecomp.pml4,
+             r->currDecomp.pdpt, r->currDecomp.pd, r->currDecomp.pt,
+             r->currDecomp.offset);
       printf("\n");
     }
 

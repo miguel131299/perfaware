@@ -38,3 +38,4 @@ enable_testing()
 # ----------------------
 add_subdirectory(projects/sim8086)
 add_subdirectory(projects/haversine)
+add_subdirectory(projects/perftools)
